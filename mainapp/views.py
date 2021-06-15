@@ -1,3 +1,7 @@
-from django.shortcuts import render
+from django.http import HttpResponse
 
-# Create your views here.
+from .helpers import cli_account_list
+
+def index(request):
+    accounts = cli_account_list()
+    return HttpResponse(str(accounts))
