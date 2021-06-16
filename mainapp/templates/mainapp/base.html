@@ -8,7 +8,7 @@
   <body>
     <div class="topnav">
       <a href="/"{% if request.path == '/' %} class="active"{% endif %}>Standalone accounts</a>
-      <a href="/create-wallet/"{% if request.path == '/create-wallet/' %} class="active"{% endif %}>Create wallet</a>
+      <a href="/wallets/"{% if request.path == '/wallets/' %} class="active"{% endif %}>Wallets</a>
     </div>
     <div class="body">{% block body %}{% endblock %}</div>
   </body>

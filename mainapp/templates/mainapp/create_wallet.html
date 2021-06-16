@@ -1,0 +1,10 @@
+{% extends 'mainapp/base.html' %}
+{% block title %}Create wallet{% endblock %}
+{% block body %}
+  <h1>Create wallet</h1>
+  <form action="/create-wallet/" method="post">
+    {% csrf_token %}
+    <table>{{ form.as_table }}</table>
+    <input type="submit" value="Submit">
+  </form>
+{% endblock %}

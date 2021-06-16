@@ -3,9 +3,10 @@ import os
 import subprocess
 from pathlib import Path
 
-from algosdk import account, mnemonic
+from algosdk import account, kmd, mnemonic
 from algosdk.future.transaction import PaymentTxn
 from algosdk.v2client import algod
+from algosdk.wallet import Wallet
 
 from algosdk.error import WrongChecksumError
 
@@ -15,6 +16,13 @@ def _algod_client():
     algod_address = "http://localhost:4001"
     algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     return algod.AlgodClient(algod_token, algod_address)
+
+
+def _kmd_client():
+    """Instantiate and return kmd client object."""
+    kmd_address = "http://localhost:4002"
+    kmd_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    return kmd.KMDClient(kmd_token, kmd_address)
 
 
 def _call_sandbox_command(*args):
@@ -75,6 +83,22 @@ def account_balance(address):
     return account_info.get("amount")
 
 
+def add_standalone_account():
+    """Create standalone account and return two-tuple of its address and passphrase."""
+    private_key, address = account.generate_account()
+    passphrase = mnemonic.from_private_key(private_key)
+    return address, passphrase
+
+
+def add_wallet(name, password):
+    """Create wallet and return its ID."""
+    try:
+        wallet = Wallet(name, password, _kmd_client())
+    except:
+        return ""
+    return wallet.id
+
+
 def cli_account_list():
     """Return list of accounts and coresponding balances in microAlgos."""
     process = _call_sandbox_command("goal", "account", "list")
@@ -93,13 +117,6 @@ def cli_passphrase_for_account(address):
         parts = line.split('"')
         passphrase = parts[1] if len(parts) > 1 else ""
     return passphrase
-
-
-def create_standalone_account():
-    """Create standalone account and return two-tuple of its address and passphrase."""
-    private_key, address = account.generate_account()
-    passphrase = mnemonic.from_private_key(private_key)
-    return address, passphrase
 
 
 def create_transaction(sender, receiver, passphrase, amount, note):

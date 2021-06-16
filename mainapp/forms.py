@@ -22,3 +22,18 @@ class TransferFundsForm(forms.Form):
         if len(data) != 58:
             raise ValidationError("Algorand's address must be 58 characters long!")
         return data
+
+
+class CreateWalletForm(forms.Form):
+    name = forms.CharField(min_length=2)
+    password = forms.CharField(min_length=2)
+
+    def clean_password(self):
+        """Example validation for the password field."""
+        data = self.cleaned_data["password"]
+        if data.isnumeric():
+            raise ValidationError("Alphanumeric value for password is required!")
+        if data.isalpha():
+            raise ValidationError("Alphanumeric value for password is required!")
+
+        return data

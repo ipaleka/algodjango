@@ -1,15 +1,15 @@
 {% extends 'mainapp/base.html' %}
 {% block title %}Standalone accounts{% endblock %}
 {% block body %}
-    <h1>Standalone accounts list</h1>
-    {% if accounts %}
-    <ul>
-    {% for account in accounts %}
-      <li><a href="/standalone-account/{{ account.address }}">{{ account.address }}</a> : {{ account.balance }} microAlgos</li>
-    {% endfor %}
-    </ul>
-    {% else %}
-    <p>There are no standalone accounts.</p>
-    {% endif %}
-    <a href="/create-standalone/">Create standalone account</a>
+  <h1>Standalone accounts list</h1>
+  {% if accounts %}
+  <ul>
+  {% for account in accounts %}
+    <li><a href="/standalone-account/{{ account.address }}">{{ account.address }}</a> : {{ account.balance }} microAlgos</li>
+  {% endfor %}
+  </ul>
+  {% else %}
+  <p>There are no standalone accounts.</p>
+  {% endif %}
+  <a href="/create-standalone/">Create standalone account</a>
 {% endblock %}

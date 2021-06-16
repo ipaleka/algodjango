@@ -1,0 +1,17 @@
+{% extends 'mainapp/base.html' %}
+{% block title %}Wallet page{% endblock %}
+{% block body %}
+  <h1>Wallet page</h1>
+  <p>Name: {{ wallet.name }}</p>
+  <p>ID: {{ wallet.wallet_id }}</p>
+  <p>Created: {{ wallet.created }}</p>
+
+  {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+{% endblock %}

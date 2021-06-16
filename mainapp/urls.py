@@ -8,4 +8,7 @@ urlpatterns = [
     path("standalone-account/<str:address>/", views.standalone_account, name="standalone-account"),
     path("initial-funds/<str:receiver>/", views.initial_funds, name="initial-funds"),
     path("transfer-funds/<str:sender>/", views.transfer_funds, name="transfer-funds"),
+    path("wallets/", views.wallets, name="wallets"),
+    path("create-wallet/", views.create_wallet, name="create-wallet"),
+    path("wallet/<str:wallet_id>/", views.wallet, name="wallet"),
 ]

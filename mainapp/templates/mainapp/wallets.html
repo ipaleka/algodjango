@@ -1,0 +1,15 @@
+{% extends 'mainapp/base.html' %}
+{% block title %}Wallets{% endblock %}
+{% block body %}
+  <h1>Wallets list</h1>
+  {% if wallets %}
+  <ul>
+  {% for wallet in wallets %}
+    <li><a href="/wallet/{{ wallet.wallet_id }}">{{ wallet.name }}</a></li>
+  {% endfor %}
+  </ul>
+  {% else %}
+  <p>There are no wallets.</p>
+  {% endif %}
+  <a href="/create-wallet/">Create wallet</a>
+{% endblock %}
