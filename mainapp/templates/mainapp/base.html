@@ -1,0 +1,15 @@
+{% load static %}<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Accounts{% endblock %}</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'mainapp/style.css' %}">
+  </head>
+  <body>
+    <div class="topnav">
+      <a href="/"{% if request.path == '/' %} class="active"{% endif %}>Standalone accounts</a>
+      <a href="/create-wallet/"{% if request.path == '/create-wallet/' %} class="active"{% endif %}>Create wallet</a>
+    </div>
+    <div class="body">{% block body %}{% endblock %}</div>
+  </body>
+</html>
