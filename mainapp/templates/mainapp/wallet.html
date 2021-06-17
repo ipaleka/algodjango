@@ -14,4 +14,11 @@
     </ul>
   {% endif %}
 
+  <h2>Wallet accounts</h2>
+  {% for account in wallet.walletaccount_set.all %}
+    <li><a href="/wallet-account/{{ wallet.wallet_id }}/{{ account.address }}">{{ account.address }}</a> : {{ account.balance }} microAlgos</li>
+  {% endfor %}
+  <br>
+  <a href="/create-wallet-account/{{ wallet.wallet_id }}/">Create wallet account</a>
+
 {% endblock %}

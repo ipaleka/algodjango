@@ -143,3 +143,8 @@ def create_transaction(sender, receiver, passphrase, amount, note):
     except Exception as err:
         return None, err  # None implies non-field error
     return "", ""
+
+
+def get_wallet(name, password):
+    """Return wallet object from provided arguments."""
+    return Wallet(name, password, _kmd_client())

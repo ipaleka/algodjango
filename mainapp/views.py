@@ -7,10 +7,11 @@ from .helpers import (
     cli_account_list,
     cli_passphrase_for_account,
     create_transaction,
+    get_wallet,
 )
 
 from .forms import CreateWalletForm, TransferFundsForm
-from .models import Account, Wallet
+from .models import Account, Wallet, WalletAccount
 
 
 INITIAL_FUNDS = 1000000000
@@ -57,8 +58,18 @@ def create_wallet(request):
     return render(request, "mainapp/create_wallet.html", context)
 
 
+def create_wallet_account(request, wallet_id):
+    model = Wallet.instance_from_id(wallet_id)
+    wallet = get_wallet(model.name, model.password)
+    address = wallet.generate_key()
+    WalletAccount.objects.create(wallet=model, address=address)
+    message = "Address '{}' has been created in the wallet.".format(address)
+    messages.add_message(request, messages.SUCCESS, message)
+    return redirect("wallet", wallet_id)
+
+
 def index(request):
-    accounts = Account.objects.order_by("-created")
+    accounts = Account.objects.exclude(walletaccount__isnull=False).order_by("-created")
     context = {"accounts": accounts}
     return render(request, "mainapp/index.html", context)
 
@@ -121,9 +132,16 @@ def transfer_funds(request, sender):
 
 
 def wallet(request, wallet_id):
-
     context = {"wallet": Wallet.instance_from_id(wallet_id)}
     return render(request, "mainapp/wallet.html", context)
+
+
+def wallet_account(request, wallet_id, address):
+    context = {
+        "wallet": Wallet.instance_from_id(wallet_id),
+        "account": Account.instance_from_address(address),
+    }
+    return render(request, "mainapp/wallet_account.html", context)
 
 
 def wallets(request):

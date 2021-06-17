@@ -43,3 +43,7 @@ class Wallet(models.Model):
     def __str__(self):
         """Wallet's human-readable string representation."""
         return self.name
+
+
+class WalletAccount(Account):
+    wallet = models.ForeignKey(Wallet, default=None, on_delete=models.CASCADE)
