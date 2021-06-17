@@ -1,6 +1,9 @@
 from algosdk.constants import address_len, mnemonic_len, note_max_length
 from django import forms
 from django.core.exceptions import ValidationError
+from django.forms.fields import CharField
+
+from .models import Asset
 
 
 class TransferFundsForm(forms.Form):
@@ -29,6 +32,28 @@ class TransferFundsForm(forms.Form):
         return data
 
 
+class CreateAssetForm(forms.models.ModelForm):
+    passphrase = CharField(required=True)
+
+    class Meta:
+        model = Asset
+        fields = (
+            "asset_id",
+            "creator",
+            "name",
+            "unit",
+            "total",
+            "decimals",
+            "frozen",
+            "url",
+            "metadata",
+            "manager",
+            "reserve",
+            "freeze",
+            "clawback",
+        )
+
+
 class CreateWalletForm(forms.Form):
     name = forms.CharField(min_length=2)
     password = forms.CharField(min_length=2)
@@ -42,3 +67,7 @@ class CreateWalletForm(forms.Form):
             raise ValidationError("Alphanumeric value for password is required!")
 
         return data
+
+
+class SearchTransactionsForm(forms.Form):
+    note = forms.CharField()

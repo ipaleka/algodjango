@@ -9,6 +9,8 @@
     <div class="topnav">
       <a href="/"{% if request.path == '/' %} class="active"{% endif %}>Standalone accounts</a>
       <a href="/wallets/"{% if request.path == '/wallets/' %} class="active"{% endif %}>Wallets</a>
+      <a href="/assets/"{% if request.path == '/assets/' %} class="active"{% endif %}>Assets</a>
+      <a href="/search/"{% if request.path == '/search/' %} class="active"{% endif %}>Search transactions</a>
     </div>
     <div class="body">{% block body %}{% endblock %}</div>
   </body>

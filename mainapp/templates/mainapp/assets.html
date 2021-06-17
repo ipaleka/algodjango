@@ -1,0 +1,44 @@
+{% extends 'mainapp/base.html' %}
+{% block title %}Assets{% endblock %}
+{% block body %}
+  {% if assets %}
+  <h1>Assets list</h1>
+  <table class="full-width">
+  <tr>
+    <th>ID</th>
+    <th>Creator</th>
+    <th>Name</th>
+    <th>Unit</th>
+    <th>Total</th>
+    <th>Decimals</th>
+    <th>Frozen</th>
+    <th>Url</th>
+    <th>Metadata</th>
+    <th>Manager</th>
+    <th>Reserve</th>
+    <th>Freeze</th>
+    <th>Clawback</th>
+  </tr>
+  {% for asset in assets %}
+  <tr>
+    <td>{{ asset.asset_id }}</td>
+    <td>{{ asset.creator }}</td>
+    <td>{{ asset.name }}</td>
+    <td>{{ asset.unit }}</td>
+    <td>{{ asset.total }}</td>
+    <td>{{ asset.decimals }}</td>
+    <td>{{ asset.frozen }}</td>
+    <td>{{ asset.url }}</td>
+    <td>{{ asset.metadata }}</td>
+    <td>{{ asset.manager }}</td>
+    <td>{{ asset.reserve }}</td>
+    <td>{{ asset.freeze }}</td>
+    <td>{{ asset.clawback }}</td>
+  </tr>
+  {% endfor %}
+  </table>
+  {% else %}
+  <p>There are no assets.</p>
+  {% endif %}
+  <a href="/create-asset/">Create asset</a>
+{% endblock %}

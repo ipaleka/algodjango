@@ -25,4 +25,7 @@ urlpatterns = [
         views.wallet_account,
         name="wallet-account",
     ),
+    path("assets/", views.assets, name="assets"),
+    path("create-asset/", views.create_asset, name="create-asset"),
+    path("search/", views.search, name="search"),
 ]

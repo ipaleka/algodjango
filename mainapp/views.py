@@ -3,16 +3,55 @@ from django.shortcuts import redirect, render
 
 from .helpers import (
     INITIAL_FUNDS,
+    add_asset,
     add_standalone_account,
+    add_transaction,
     add_wallet,
     cli_passphrase_for_account,
-    initial_funds_sender,
-    create_transaction,
     get_wallet,
+    initial_funds_sender,
+    search_transactions,
 )
 
-from .forms import CreateWalletForm, TransferFundsForm
-from .models import Account, Wallet, WalletAccount
+from .forms import (
+    CreateAssetForm,
+    CreateWalletForm,
+    SearchTransactionsForm,
+    TransferFundsForm,
+)
+from .models import Account, Asset, Wallet, WalletAccount
+
+
+def assets(request):
+    assets = Asset.objects.order_by("-created")
+    context = {"assets": assets}
+    return render(request, "mainapp/assets.html", context)
+
+
+def create_asset(request, address):
+
+    if request.method == "POST":
+
+        form = CreateAssetForm(request.POST)
+
+        if form.is_valid():
+
+            error_field, error_description = add_asset(form.cleaned_data)
+            if error_field == "":
+                message = "Asset {} has been successfully created!".format(
+                    form.cleaned_data["name"]
+                )
+                messages.add_message(request, messages.SUCCESS, message)
+                return redirect("assets")
+
+            form.add_error(error_field, error_description)
+
+    else:
+        form = CreateAssetForm()
+
+    context = {"form": form}
+
+    return render(request, "mainapp/create_asset.html", context)
 
 
 def create_standalone(request):
@@ -77,7 +116,7 @@ def initial_funds(request, receiver):
     if sender is None:
         return render(request, "mainapp/initial_funds.html", {})
 
-    create_transaction(
+    add_transaction(
         sender,
         receiver,
         cli_passphrase_for_account(sender),
@@ -85,6 +124,25 @@ def initial_funds(request, receiver):
         "Initial funds",
     )
     return redirect("standalone-account", receiver)
+
+
+def search(request):
+
+    transactions = []
+    if request.method == "POST":
+
+        form = SearchTransactionsForm(request.POST)
+
+        if form.is_valid():
+
+            transactions = search_transactions(form.cleaned_data)
+
+    else:
+        form = TransferFundsForm()
+
+    context = {"form": form, "transactions": transactions}
+
+    return render(request, "mainapp/search.html", context)
 
 
 def standalone_account(request, address):
@@ -101,7 +159,7 @@ def transfer_funds(request, sender):
 
         if form.is_valid():
 
-            error_field, error_description = create_transaction(
+            error_field, error_description = add_transaction(
                 sender,
                 form.cleaned_data["receiver"],
                 form.cleaned_data["passphrase"],

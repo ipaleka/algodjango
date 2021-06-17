@@ -31,6 +31,27 @@ class Account(models.Model):
         return self.address
 
 
+class Asset(models.Model):
+    asset_id = models.IntegerField(blank=False)
+    creator = models.CharField(max_length=address_len, blank=False)
+    name = models.CharField(max_length=hash_len)
+    unit = models.CharField(max_length=8)
+    total = models.IntegerField(blank=False)
+    decimals = models.IntegerField(blank=False)
+    frozen = models.BooleanField(blank=False, default=False)
+    url = models.URLField()
+    metadata = models.CharField(max_length=hash_len)
+    manager = models.CharField(max_length=address_len, blank=True)
+    reserve = models.CharField(max_length=address_len, blank=True)
+    freeze = models.CharField(max_length=address_len, blank=True)
+    clawback = models.CharField(max_length=address_len, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        """Asset's human-readable string representation."""
+        return self.name
+
+
 class Wallet(models.Model):
     wallet_id = models.CharField(max_length=hash_len)
     name = models.CharField(max_length=50)

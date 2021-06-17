@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 from algosdk import account, kmd, mnemonic
-from algosdk.future.transaction import PaymentTxn
+from algosdk.transaction import AssetConfigTxn, PaymentTxn
 from algosdk.v2client import algod, indexer
 from algosdk.wallet import Wallet
 
@@ -99,7 +99,7 @@ def _wait_for_confirmation(client, transaction_id, timeout):
     )
 
 
-def create_transaction(sender, receiver, passphrase, amount, note):
+def add_transaction(sender, receiver, passphrase, amount, note):
     """Create and sign transaction from provided arguments.
 
     Returned non-empty tuple carries field where error was raised and description.
@@ -126,6 +126,47 @@ def create_transaction(sender, receiver, passphrase, amount, note):
 
 
 ## CREATING
+def add_asset(data):
+    client = _algod_client()
+    params = client.suggested_params()
+    unsigned_txn = AssetConfigTxn(
+        sp=params,
+        sender=data.get("creator"),
+        asset_name=data.get("name"),
+        unit_name=data.get("unit"),
+        total=data.get("total"),
+        decimals=data.get("decimals"),
+        default_frozen=data.get("frozen"),
+        url=data.get("url"),
+        manager=data.get("manager"),
+        reserve=data.get("reserve"),
+        freeze=data.get("freeze"),
+        clawback=data.get("clawback"),
+    )
+    # Sign with secret key of creator
+    signed_txn = unsigned_txn.sign(data.get("passphrase"))
+
+    transaction_id = client.send_transaction(signed_txn)
+    try:
+        _wait_for_confirmation(client, transaction_id, 4)
+    except Exception as err:
+        return None, err  # None implies non-field error
+
+    try:
+        # Pull account info for the creator
+        # account_info = algod_client.account_info(accounts[1]['pk'])
+        # get asset_id from tx
+        # Get the new asset's information from the creator account
+        ptx = client.pending_transaction_info(transaction_id)
+        asset_id = ptx["asset-index"]
+        # print_created_asset(algod_client, accounts[1]["pk"], asset_id)
+        # print_asset_holding(algod_client, accounts[1]["pk"], asset_id)
+    except Exception as err:
+        return None, err
+
+    return "", ""
+
+
 def add_standalone_account():
     """Create standalone account and return two-tuple of its address and passphrase."""
     private_key, address = account.generate_account()
@@ -189,3 +230,9 @@ def initial_funds_sender():
         ),
         None,
     )
+
+
+def search_transactions(data):
+    """Search transaction based on criteria from provided data."""
+    criteria = _parse_criteria(data)
+    return _indexer_client().search_transactions(criteria).get("transactions", [])
