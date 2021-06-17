@@ -1,3 +1,4 @@
+import base64
 import io
 import os
 import subprocess
@@ -9,6 +10,40 @@ from algosdk.v2client import algod, indexer
 from algosdk.wallet import Wallet
 
 from algosdk.error import WrongChecksumError
+
+INITIAL_FUNDS = 1000000000
+
+
+## SANDBOX
+def _call_sandbox_command(*args):
+    """Call and return sandbox command composed from provided arguments."""
+    return subprocess.Popen(
+        [_sandbox_executable(), *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
+def _sandbox_executable():
+    """Return full path to Algorand's sandbox executable.
+
+    The location of sandbox directory is retrieved either from the SANDBOX_DIR
+    environment variable or if it's not set then the location of sandbox directory
+    is implied to be the sibling of this Django project in the directory tree.
+    """
+    sandbox_dir = os.environ.get("SANDBOX_DIR") or str(
+        Path(__file__).resolve().parent.parent.parent / "sandbox"
+    )
+    return sandbox_dir + "/sandbox"
+
+
+def cli_passphrase_for_account(address):
+    """Return passphrase for provided address."""
+    process = _call_sandbox_command("goal", "account", "export", "-a", address)
+    for line in io.TextIOWrapper(process.stdout):
+        parts = line.split('"')
+        passphrase = parts[1] if len(parts) > 1 else ""
+    return passphrase
 
 
 ## CLIENTS
@@ -33,28 +68,7 @@ def _kmd_client():
     return kmd.KMDClient(kmd_token, kmd_address)
 
 
-def _call_sandbox_command(*args):
-    """Call and return sandbox command composed from provided arguments."""
-    return subprocess.Popen(
-        [_sandbox_executable(), *args],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-
-
-def _sandbox_executable():
-    """Return full path to Algorand's sandbox executable.
-
-    The location of sandbox directory is retrieved either from the SANDBOX_DIR
-    environment variable or if it's not set then the location of sandbox directory
-    is implied to be the sibling of this Django project in the directory tree.
-    """
-    sandbox_dir = os.environ.get("SANDBOX_DIR") or str(
-        Path(__file__).resolve().parent.parent.parent / "sandbox"
-    )
-    return sandbox_dir + "/sandbox"
-
-
+## TRANSACTIONS
 def _wait_for_confirmation(client, transaction_id, timeout):
     """
     Wait until the transaction is confirmed or rejected, or until 'timeout'
@@ -85,48 +99,6 @@ def _wait_for_confirmation(client, transaction_id, timeout):
     )
 
 
-def account_balance(address):
-    """Return funds balance of the account having provided address."""
-    account_info = _algod_client().account_info(address)
-    return account_info.get("amount")
-
-
-def add_standalone_account():
-    """Create standalone account and return two-tuple of its address and passphrase."""
-    private_key, address = account.generate_account()
-    passphrase = mnemonic.from_private_key(private_key)
-    return address, passphrase
-
-
-def add_wallet(name, password):
-    """Create wallet and return its ID."""
-    try:
-        wallet = Wallet(name, password, _kmd_client())
-    except:
-        return ""
-    return wallet.id
-
-
-def cli_account_list():
-    """Return list of accounts and coresponding balances in microAlgos."""
-    process = _call_sandbox_command("goal", "account", "list")
-    accounts = []
-    for line in io.TextIOWrapper(process.stdout):
-        current = line.split()
-        accounts.append((current[1], int(current[3])))
-
-    return accounts
-
-
-def cli_passphrase_for_account(address):
-    """Return passphrase for provided address."""
-    process = _call_sandbox_command("goal", "account", "export", "-a", address)
-    for line in io.TextIOWrapper(process.stdout):
-        parts = line.split('"')
-        passphrase = parts[1] if len(parts) > 1 else ""
-    return passphrase
-
-
 def create_transaction(sender, receiver, passphrase, amount, note):
     """Create and sign transaction from provided arguments.
 
@@ -153,12 +125,28 @@ def create_transaction(sender, receiver, passphrase, amount, note):
     return "", ""
 
 
-def get_wallet(name, password):
-    """Return wallet object from provided arguments."""
-    return Wallet(name, password, _kmd_client())
+## CREATING
+def add_standalone_account():
+    """Create standalone account and return two-tuple of its address and passphrase."""
+    private_key, address = account.generate_account()
+    passphrase = mnemonic.from_private_key(private_key)
+    return address, passphrase
 
 
-import base64
+def add_wallet(name, password):
+    """Create wallet and return its ID."""
+    try:
+        wallet = Wallet(name, password, _kmd_client())
+    except:
+        return ""
+    return wallet.id
+
+
+## RETRIEVING
+def account_balance(address):
+    """Return funds balance of the account having provided address."""
+    account_info = _algod_client().account_info(address)
+    return account_info.get("amount")
 
 
 def account_transactions(address):
@@ -179,3 +167,25 @@ def account_transactions(address):
         }
         for tr in transactions
     ]
+
+
+def get_wallet(name, password):
+    """Return wallet object from provided arguments."""
+    return Wallet(name, password, _kmd_client())
+
+
+def initial_funds_sender():
+    """Get the address of initially created account having enough funds.
+
+    Such an account is used to transfer initial funds for the accounts
+    created in this tutorial.
+    """
+    return next(
+        (
+            account.get("address")
+            for account in _indexer_client().accounts().get("accounts", [])
+            if account.get("created-at-round") == 0
+            and account.get("amount") > INITIAL_FUNDS
+        ),
+        None,
+    )

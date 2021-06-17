@@ -2,19 +2,17 @@ from django.contrib import messages
 from django.shortcuts import redirect, render
 
 from .helpers import (
+    INITIAL_FUNDS,
     add_standalone_account,
     add_wallet,
-    cli_account_list,
     cli_passphrase_for_account,
+    initial_funds_sender,
     create_transaction,
     get_wallet,
 )
 
 from .forms import CreateWalletForm, TransferFundsForm
 from .models import Account, Wallet, WalletAccount
-
-
-INITIAL_FUNDS = 1000000000
 
 
 def create_standalone(request):
@@ -75,12 +73,8 @@ def index(request):
 
 
 def initial_funds(request, receiver):
-
-    for account in cli_account_list():
-        if account[1] > INITIAL_FUNDS:
-            sender = account[0]
-            break
-    else:
+    sender = initial_funds_sender()
+    if sender is None:
         return render(request, "mainapp/initial_funds.html", {})
 
     create_transaction(
