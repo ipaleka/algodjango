@@ -3,7 +3,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.http import Http404
 
-from .helpers import account_balance
+from .helpers import account_balance, account_transactions
 
 
 class Account(models.Model):
@@ -21,6 +21,10 @@ class Account(models.Model):
     def balance(self):
         """Return this instance's balance in microAlgos."""
         return account_balance(self.address)
+
+    def transactions(self):
+        """Return all the transactions involving this account."""
+        return account_transactions(self.address)
 
     def __str__(self):
         """Account's human-readable string representation."""

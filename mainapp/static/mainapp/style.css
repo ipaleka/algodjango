@@ -38,3 +38,11 @@ ul.errorlist li {
 ul.messages li.success {
     color: green;
 }
+
+table.trx {
+    width:100%;
+}
+
+th {
+    text-align: left;
+}

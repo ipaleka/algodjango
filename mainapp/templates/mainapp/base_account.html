@@ -1,0 +1,41 @@
+{% extends 'mainapp/base.html' %}
+{% block title %}Account page{% endblock %}
+{% block body %}
+  <h1>{% block prefix %}Standalone{% endblock prefix %} account page</h1>
+  {% block start %}{% endblock start %}
+  <p>Address: {{ account.address }}</p>
+  <p>Created: {{ account.created }}</p>
+  <p>Balance: {{ account.balance }} microAlgos</p>
+
+  {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <a href="/transfer-funds/{{ account.address }}/">Transfer funds</a>
+
+  <h2>Transactions</h2>
+  <table class="trx">
+  <tr>
+    <th>Round</th>
+    <th>Sender</th>
+    <th>Receiver</th>
+    <th>Amount</th>
+    <th>Type</th>
+    <th>Note</th>
+  </tr>
+  {% for transaction in account.transactions %}
+  <tr>
+    <td>{{ transaction.round }}</td>
+    <td>{{ transaction.sender }}</td>
+    <td>{{ transaction.receiver }}</td>
+    <td>{{ transaction.amount }}</td>
+    <td>{{ transaction.type }}</td>
+    <td>{{ transaction.note }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock body %}

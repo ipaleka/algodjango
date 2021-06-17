@@ -8,34 +8,66 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Account',
+            name="Account",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('address', models.CharField(max_length=58)),
-                ('created', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("address", models.CharField(max_length=58)),
+                ("created", models.DateTimeField(auto_now_add=True)),
             ],
         ),
         migrations.CreateModel(
-            name='Wallet',
+            name="Wallet",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('wallet_id', models.CharField(max_length=32)),
-                ('name', models.CharField(max_length=50)),
-                ('password', models.CharField(max_length=50)),
-                ('created', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("wallet_id", models.CharField(max_length=32)),
+                ("name", models.CharField(max_length=50)),
+                ("password", models.CharField(max_length=50)),
+                ("created", models.DateTimeField(auto_now_add=True)),
             ],
         ),
         migrations.CreateModel(
-            name='WalletAccount',
+            name="WalletAccount",
             fields=[
-                ('account_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='mainapp.account')),
-                ('wallet', models.ForeignKey(default=None, on_delete=django.db.models.deletion.CASCADE, to='mainapp.wallet')),
+                (
+                    "account_ptr",
+                    models.OneToOneField(
+                        auto_created=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        parent_link=True,
+                        primary_key=True,
+                        serialize=False,
+                        to="mainapp.account",
+                    ),
+                ),
+                (
+                    "wallet",
+                    models.ForeignKey(
+                        default=None,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="mainapp.wallet",
+                    ),
+                ),
             ],
-            bases=('mainapp.account',),
+            bases=("mainapp.account",),
         ),
     ]

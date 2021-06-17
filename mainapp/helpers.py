@@ -5,17 +5,25 @@ from pathlib import Path
 
 from algosdk import account, kmd, mnemonic
 from algosdk.future.transaction import PaymentTxn
-from algosdk.v2client import algod
+from algosdk.v2client import algod, indexer
 from algosdk.wallet import Wallet
 
 from algosdk.error import WrongChecksumError
 
 
+## CLIENTS
 def _algod_client():
     """Instantiate and return Algod client object."""
     algod_address = "http://localhost:4001"
     algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     return algod.AlgodClient(algod_token, algod_address)
+
+
+def _indexer_client():
+    """Instantiate and return Indexer client object."""
+    indexer_address = "http://localhost:8980"
+    indexer_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    return indexer.IndexerClient(indexer_token, indexer_address)
 
 
 def _kmd_client():
@@ -148,3 +156,26 @@ def create_transaction(sender, receiver, passphrase, amount, note):
 def get_wallet(name, password):
     """Return wallet object from provided arguments."""
     return Wallet(name, password, _kmd_client())
+
+
+import base64
+
+
+def account_transactions(address):
+    """Return all transactions involving provided address."""
+    transactions = (
+        _indexer_client()
+        .search_transactions_by_address(address)
+        .get("transactions", [])
+    )
+    return [
+        {
+            "round": tr.get("confirmed-round"),
+            "sender": tr.get("sender"),
+            "receiver": tr.get("payment-transaction", {}).get("receiver"),
+            "amount": tr.get("payment-transaction", {}).get("amount"),
+            "type": tr.get("tx-type"),
+            "note": base64.b64decode(tr.get("note")).decode("utf-8"),
+        }
+        for tr in transactions
+    ]
