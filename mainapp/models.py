@@ -1,3 +1,4 @@
+from algosdk.constants import address_len, hash_len
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import models
 from django.http import Http404
@@ -6,7 +7,7 @@ from .helpers import account_balance
 
 
 class Account(models.Model):
-    address = models.CharField(max_length=58)
+    address = models.CharField(max_length=address_len)
     created = models.DateTimeField(auto_now_add=True)
 
     @classmethod
@@ -27,7 +28,7 @@ class Account(models.Model):
 
 
 class Wallet(models.Model):
-    wallet_id = models.CharField(max_length=32)
+    wallet_id = models.CharField(max_length=hash_len)
     name = models.CharField(max_length=50)
     password = models.CharField(max_length=50)
     created = models.DateTimeField(auto_now_add=True)
