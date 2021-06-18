@@ -5,7 +5,8 @@
   {% block start %}{% endblock start %}
   <p>Address: {{ account.address }}</p>
   <p>Created: {{ account.created }}</p>
-
+  <p>Balance: {{ account.balance }} microAlgos</p>
+  <br>
   {% if messages %}
     <ul class="messages">
       {% for message in messages %}
@@ -13,31 +14,27 @@
       {% endfor %}
     </ul>
   {% endif %}
-  <br>
-  <a href="/create-asset/{{ account.address }}/">Create asset</a>
-  <hr>
-  <p>Balance: {{ account.balance }} microAlgos</p>
-  <br>
   <a href="/transfer-funds/{{ account.address }}/">Transfer funds</a>
 
   <h2>Transactions</h2>
   <table class="full-width">
   <tr>
     <th>Round</th>
-    <th>Sender</th>
-    <th>Receiver</th>
-    <th>Amount</th>
     <th>Type</th>
+    <th>Sender/Receiver</th>
+    <th>Amount</th>
     <th>Note</th>
   </tr>
   {% for transaction in account.transactions %}
   <tr>
-    <td>{{ transaction.round }}</td>
+    <td rowspan="2">{{ transaction.round }}</td>
+    <td rowspan="2">{{ transaction.type }}</td>
     <td>{{ transaction.sender }}</td>
+    <td rowspan="2">{{ transaction.amount }}</td>
+    <td rowspan="2">{{ transaction.note }}</td>
+  </tr>
+  <tr>
     <td>{{ transaction.receiver }}</td>
-    <td>{{ transaction.amount }}</td>
-    <td>{{ transaction.type }}</td>
-    <td>{{ transaction.note }}</td>
   </tr>
   {% endfor %}
 </table>

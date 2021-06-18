@@ -5,7 +5,7 @@ import subprocess
 from pathlib import Path
 
 from algosdk import account, kmd, mnemonic
-from algosdk.transaction import AssetConfigTxn, PaymentTxn
+from algosdk.future.transaction import AssetConfigTxn, PaymentTxn
 from algosdk.v2client import algod, indexer
 from algosdk.wallet import Wallet
 
@@ -142,9 +142,10 @@ def add_asset(data):
         reserve=data.get("reserve"),
         freeze=data.get("freeze"),
         clawback=data.get("clawback"),
+        strict_empty_address_check=False,
     )
     # Sign with secret key of creator
-    signed_txn = unsigned_txn.sign(data.get("passphrase"))
+    signed_txn = unsigned_txn.sign(mnemonic.to_private_key(data.get("passphrase")))
 
     transaction_id = client.send_transaction(signed_txn)
     try:
@@ -153,19 +154,12 @@ def add_asset(data):
         return None, err  # None implies non-field error
 
     try:
-        # Pull account info for the creator
-        # account_info = algod_client.account_info(accounts[1]['pk'])
-        # get asset_id from tx
-        # Get the new asset's information from the creator account
         ptx = client.pending_transaction_info(transaction_id)
-        asset_id = ptx["asset-index"]
-        # print_created_asset(algod_client, accounts[1]["pk"], asset_id)
-        # print_asset_holding(algod_client, accounts[1]["pk"], asset_id)
+        asset_id = ptx.get("asset-index")
+        return asset_id, ""
+
     except Exception as err:
         return None, err
-
-    return "", ""
-
 
 def add_standalone_account():
     """Create standalone account and return two-tuple of its address and passphrase."""
@@ -200,11 +194,11 @@ def account_transactions(address):
     return [
         {
             "round": tr.get("confirmed-round"),
+            "type": tr.get("tx-type"),
             "sender": tr.get("sender"),
             "receiver": tr.get("payment-transaction", {}).get("receiver"),
             "amount": tr.get("payment-transaction", {}).get("amount"),
-            "type": tr.get("tx-type"),
-            "note": base64.b64decode(tr.get("note")).decode("utf-8"),
+            "note": base64.b64decode(tr.get("note", "")).decode("utf-8"),
         }
         for tr in transactions
     ]

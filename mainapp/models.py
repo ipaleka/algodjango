@@ -1,5 +1,6 @@
 from algosdk.constants import address_len, hash_len
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.http import Http404
 
@@ -34,13 +35,18 @@ class Account(models.Model):
 class Asset(models.Model):
     asset_id = models.IntegerField(blank=False)
     creator = models.CharField(max_length=address_len, blank=False)
-    name = models.CharField(max_length=hash_len)
-    unit = models.CharField(max_length=8)
-    total = models.IntegerField(blank=False)
-    decimals = models.IntegerField(blank=False)
+    name = models.CharField(max_length=hash_len, blank=True)
+    unit = models.CharField(max_length=8, blank=True)
+    total = models.IntegerField(
+        blank=False,
+        validators=[MinValueValidator(1)],
+    )
+    decimals = models.IntegerField(
+        blank=False, validators=[MinValueValidator(0), MaxValueValidator(20)]
+    )
     frozen = models.BooleanField(blank=False, default=False)
-    url = models.URLField()
-    metadata = models.CharField(max_length=hash_len)
+    url = models.URLField(blank=True)
+    metadata = models.CharField(max_length=hash_len,blank=True)
     manager = models.CharField(max_length=address_len, blank=True)
     reserve = models.CharField(max_length=address_len, blank=True)
     freeze = models.CharField(max_length=address_len, blank=True)

@@ -28,7 +28,7 @@ def assets(request):
     return render(request, "mainapp/assets.html", context)
 
 
-def create_asset(request, address):
+def create_asset(request):
 
     if request.method == "POST":
 
@@ -36,15 +36,20 @@ def create_asset(request, address):
 
         if form.is_valid():
 
-            error_field, error_description = add_asset(form.cleaned_data)
-            if error_field == "":
+            asset_id, error_description = add_asset(form.cleaned_data)
+            if error_description == "":
+
+                asset = form.save(commit=False)
+                asset.asset_id = asset_id
+                asset.save()
+
                 message = "Asset {} has been successfully created!".format(
                     form.cleaned_data["name"]
                 )
                 messages.add_message(request, messages.SUCCESS, message)
                 return redirect("assets")
 
-            form.add_error(error_field, error_description)
+            form.add_error(None, error_description)
 
     else:
         form = CreateAssetForm()

@@ -38,7 +38,6 @@ class CreateAssetForm(forms.models.ModelForm):
     class Meta:
         model = Asset
         fields = (
-            "asset_id",
             "creator",
             "name",
             "unit",
