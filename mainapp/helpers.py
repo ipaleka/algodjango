@@ -161,6 +161,7 @@ def add_asset(data):
     except Exception as err:
         return None, err
 
+
 def add_standalone_account():
     """Create standalone account and return two-tuple of its address and passphrase."""
     private_key, address = account.generate_account()
@@ -193,6 +194,7 @@ def account_transactions(address):
     )
     return [
         {
+            "id": tr.get("id"),
             "round": tr.get("confirmed-round"),
             "type": tr.get("tx-type"),
             "sender": tr.get("sender"),
@@ -228,5 +230,11 @@ def initial_funds_sender():
 
 def search_transactions(data):
     """Search transaction based on criteria from provided data."""
-    criteria = _parse_criteria(data)
-    return _indexer_client().search_transactions(criteria).get("transactions", [])
+    criteria = {key: val for key, val in data.items() if val != ""}
+    transactions = (
+        _indexer_client().search_transactions(**criteria).get("transactions", [])
+    )
+    # Decode notes before returning the list
+    for tr in transactions:
+        tr["note"] = base64.b64decode(tr.get("note", "")).decode("utf-8")
+    return transactions

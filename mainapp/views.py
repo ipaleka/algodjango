@@ -143,7 +143,7 @@ def search(request):
             transactions = search_transactions(form.cleaned_data)
 
     else:
-        form = TransferFundsForm()
+        form = SearchTransactionsForm()
 
     context = {"form": form, "transactions": transactions}
 

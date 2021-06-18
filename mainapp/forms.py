@@ -69,4 +69,33 @@ class CreateWalletForm(forms.Form):
 
 
 class SearchTransactionsForm(forms.Form):
-    note = forms.CharField()
+    note_prefix = forms.CharField(required=False)
+    address = forms.CharField(required=False)
+    asset_id = forms.CharField(required=False, label="Asset ID")
+    txid = forms.CharField(required=False, label="Transaction ID")
+    block = forms.CharField(required=False, label="Round")
+    txn_type = forms.ChoiceField(
+        required=False,
+        choices=[
+            ("", "All types"),
+            ("pay", "Payment"),
+            ("keyreg", "Key registration"),
+            ("acfg", "Asset configuration"),
+            ("axfer", "Asset freeze"),
+            ("afrz", "Asset transfer"),
+        ],
+        label="Transaction type"
+    )
+
+    def clean_note_prefix(self):
+        """Algorand SDK needs bytes-like object for note prefix."""
+        data = self.cleaned_data["note_prefix"]
+        return data.encode("ascii") if data != "" else data
+
+    def clean(self):
+        """Ensure at least one field is non-empty."""
+        cleaned_data = super().clean()
+        if all(val == "" for val in cleaned_data.values()):
+            raise ValidationError("You should fill at least one field!")
+
+        return cleaned_data

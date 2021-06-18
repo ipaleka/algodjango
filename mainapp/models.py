@@ -46,7 +46,7 @@ class Asset(models.Model):
     )
     frozen = models.BooleanField(blank=False, default=False)
     url = models.URLField(blank=True)
-    metadata = models.CharField(max_length=hash_len,blank=True)
+    metadata = models.CharField(max_length=hash_len, blank=True)
     manager = models.CharField(max_length=address_len, blank=True)
     reserve = models.CharField(max_length=address_len, blank=True)
     freeze = models.CharField(max_length=address_len, blank=True)

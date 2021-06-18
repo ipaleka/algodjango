@@ -19,21 +19,22 @@
   <h2>Transactions</h2>
   <table class="full-width">
   <tr>
-    <th>Round</th>
-    <th>Type</th>
+    <th>ID</th>
+    <th>Round/Type</th>
     <th>Sender/Receiver</th>
     <th>Amount</th>
     <th>Note</th>
   </tr>
   {% for transaction in account.transactions %}
   <tr>
-    <td rowspan="2">{{ transaction.round }}</td>
-    <td rowspan="2">{{ transaction.type }}</td>
+    <td rowspan="2">{{ transaction.id }}</td>
+    <td>{{ transaction.round }}</td>
     <td>{{ transaction.sender }}</td>
     <td rowspan="2">{{ transaction.amount }}</td>
     <td rowspan="2">{{ transaction.note }}</td>
   </tr>
   <tr>
+    <td>{{ transaction.type }}</td>
     <td>{{ transaction.receiver }}</td>
   </tr>
   {% endfor %}
