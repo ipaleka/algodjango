@@ -23,13 +23,14 @@ from .models import Account, Asset, Wallet, WalletAccount
 
 
 def assets(request):
+    """Display all the created assets."""
     assets = Asset.objects.order_by("-created")
     context = {"assets": assets}
     return render(request, "mainapp/assets.html", context)
 
 
 def create_asset(request):
-
+    """Create Algorand asset from the form data."""
     if request.method == "POST":
 
         form = CreateAssetForm(request.POST)
@@ -60,7 +61,7 @@ def create_asset(request):
 
 
 def create_standalone(request):
-
+    """Create standalone account."""
     address, passphrase = add_standalone_account()
     Account.objects.create(address=address)
     context = {"account": (address, passphrase)}
@@ -68,7 +69,7 @@ def create_standalone(request):
 
 
 def create_wallet(request):
-
+    """Create wallet from the form data."""
     if request.method == "POST":
 
         form = CreateWalletForm(request.POST)
@@ -101,6 +102,7 @@ def create_wallet(request):
 
 
 def create_wallet_account(request, wallet_id):
+    """Create account in the wallet with provided ID."""
     model = Wallet.instance_from_id(wallet_id)
     wallet = get_wallet(model.name, model.password)
     address = wallet.generate_key()
@@ -111,12 +113,18 @@ def create_wallet_account(request, wallet_id):
 
 
 def index(request):
+    """Display all the created standalone accounts."""
     accounts = Account.objects.exclude(walletaccount__isnull=False).order_by("-created")
     context = {"accounts": accounts}
     return render(request, "mainapp/index.html", context)
 
 
 def initial_funds(request, receiver):
+    """Add initial funds to provided standalone receiver account.
+
+    Initial funds are transferred from one of the testing accounts
+    created in the sandbox.
+    """
     sender = initial_funds_sender()
     if sender is None:
         return render(request, "mainapp/initial_funds.html", {})
@@ -132,7 +140,7 @@ def initial_funds(request, receiver):
 
 
 def search(request):
-
+    """Search transactions based on criteria created from the form data."""
     transactions = []
     if request.method == "POST":
 
@@ -151,13 +159,13 @@ def search(request):
 
 
 def standalone_account(request, address):
-
+    """Display information of the standalone account with provided address."""
     context = {"account": Account.instance_from_address(address)}
     return render(request, "mainapp/standalone_account.html", context)
 
 
 def transfer_funds(request, sender):
-
+    """Transfer funds from the provided sender account to the receiver from the form."""
     if request.method == "POST":
 
         form = TransferFundsForm(request.POST)
@@ -189,11 +197,13 @@ def transfer_funds(request, sender):
 
 
 def wallet(request, wallet_id):
+    """Display information of the wallet with provided ID."""
     context = {"wallet": Wallet.instance_from_id(wallet_id)}
     return render(request, "mainapp/wallet.html", context)
 
 
 def wallet_account(request, wallet_id, address):
+    """Display information of the wallet account with provided address."""
     context = {
         "wallet": Wallet.instance_from_id(wallet_id),
         "account": Account.instance_from_address(address),
@@ -202,6 +212,7 @@ def wallet_account(request, wallet_id, address):
 
 
 def wallets(request):
+    """Display all the created wallets."""
     wallets = Wallet.objects.order_by("-created")
     context = {"wallets": wallets}
     return render(request, "mainapp/wallets.html", context)

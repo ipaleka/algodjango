@@ -9,54 +9,107 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Account',
+            name="Account",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('address', models.CharField(max_length=58)),
-                ('created', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("address", models.CharField(max_length=58)),
+                ("created", models.DateTimeField(auto_now_add=True)),
             ],
         ),
         migrations.CreateModel(
-            name='Asset',
+            name="Asset",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('asset_id', models.IntegerField()),
-                ('creator', models.CharField(max_length=58)),
-                ('name', models.CharField(blank=True, max_length=32)),
-                ('unit', models.CharField(blank=True, max_length=8)),
-                ('total', models.IntegerField(validators=[django.core.validators.MinValueValidator(1)])),
-                ('decimals', models.IntegerField(validators=[django.core.validators.MinValueValidator(0), django.core.validators.MaxValueValidator(20)])),
-                ('frozen', models.BooleanField(default=False)),
-                ('url', models.URLField(blank=True)),
-                ('metadata', models.CharField(blank=True, max_length=32)),
-                ('manager', models.CharField(blank=True, max_length=58)),
-                ('reserve', models.CharField(blank=True, max_length=58)),
-                ('freeze', models.CharField(blank=True, max_length=58)),
-                ('clawback', models.CharField(blank=True, max_length=58)),
-                ('created', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("asset_id", models.IntegerField()),
+                ("creator", models.CharField(max_length=58)),
+                ("name", models.CharField(blank=True, max_length=32)),
+                ("unit", models.CharField(blank=True, max_length=8)),
+                (
+                    "total",
+                    models.IntegerField(
+                        validators=[django.core.validators.MinValueValidator(1)]
+                    ),
+                ),
+                (
+                    "decimals",
+                    models.IntegerField(
+                        validators=[
+                            django.core.validators.MinValueValidator(0),
+                            django.core.validators.MaxValueValidator(20),
+                        ]
+                    ),
+                ),
+                ("frozen", models.BooleanField(default=False)),
+                ("url", models.URLField(blank=True)),
+                ("metadata", models.CharField(blank=True, max_length=32)),
+                ("manager", models.CharField(blank=True, max_length=58)),
+                ("reserve", models.CharField(blank=True, max_length=58)),
+                ("freeze", models.CharField(blank=True, max_length=58)),
+                ("clawback", models.CharField(blank=True, max_length=58)),
+                ("created", models.DateTimeField(auto_now_add=True)),
             ],
         ),
         migrations.CreateModel(
-            name='Wallet',
+            name="Wallet",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('wallet_id', models.CharField(max_length=32)),
-                ('name', models.CharField(max_length=50)),
-                ('password', models.CharField(max_length=50)),
-                ('created', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("wallet_id", models.CharField(max_length=32)),
+                ("name", models.CharField(max_length=50)),
+                ("password", models.CharField(max_length=50)),
+                ("created", models.DateTimeField(auto_now_add=True)),
             ],
         ),
         migrations.CreateModel(
-            name='WalletAccount',
+            name="WalletAccount",
             fields=[
-                ('account_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='mainapp.account')),
-                ('wallet', models.ForeignKey(default=None, on_delete=django.db.models.deletion.CASCADE, to='mainapp.wallet')),
+                (
+                    "account_ptr",
+                    models.OneToOneField(
+                        auto_created=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        parent_link=True,
+                        primary_key=True,
+                        serialize=False,
+                        to="mainapp.account",
+                    ),
+                ),
+                (
+                    "wallet",
+                    models.ForeignKey(
+                        default=None,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="mainapp.wallet",
+                    ),
+                ),
             ],
-            bases=('mainapp.account',),
+            bases=("mainapp.account",),
         ),
     ]

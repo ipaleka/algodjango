@@ -8,6 +8,8 @@ from .helpers import account_balance, account_transactions
 
 
 class Account(models.Model):
+    """Base model class for standalone and wallet accounts."""
+
     address = models.CharField(max_length=address_len)
     created = models.DateTimeField(auto_now_add=True)
 
@@ -33,6 +35,8 @@ class Account(models.Model):
 
 
 class Asset(models.Model):
+    """Model class for Algorand assets."""
+
     asset_id = models.IntegerField(blank=False)
     creator = models.CharField(max_length=address_len, blank=False)
     name = models.CharField(max_length=hash_len, blank=True)
@@ -59,6 +63,8 @@ class Asset(models.Model):
 
 
 class Wallet(models.Model):
+    """Model class for wallets."""
+
     wallet_id = models.CharField(max_length=hash_len)
     name = models.CharField(max_length=50)
     password = models.CharField(max_length=50)
@@ -78,4 +84,6 @@ class Wallet(models.Model):
 
 
 class WalletAccount(Account):
+    """Model class for accounts belonging to wallets."""
+
     wallet = models.ForeignKey(Wallet, default=None, on_delete=models.CASCADE)

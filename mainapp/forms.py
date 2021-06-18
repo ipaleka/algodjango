@@ -7,6 +7,8 @@ from .models import Asset
 
 
 class TransferFundsForm(forms.Form):
+    """Django form for transfering microAlgos between accounts."""
+
     passphrase = forms.CharField()
     receiver = forms.CharField(max_length=address_len)
     amount = forms.IntegerField(min_value=1)
@@ -33,6 +35,8 @@ class TransferFundsForm(forms.Form):
 
 
 class CreateAssetForm(forms.models.ModelForm):
+    """Django model form for creating Algorand assets."""
+
     passphrase = CharField(required=True)
 
     class Meta:
@@ -54,6 +58,8 @@ class CreateAssetForm(forms.models.ModelForm):
 
 
 class CreateWalletForm(forms.Form):
+    """Django form for creating wallets."""
+
     name = forms.CharField(min_length=2)
     password = forms.CharField(min_length=2)
 
@@ -69,6 +75,8 @@ class CreateWalletForm(forms.Form):
 
 
 class SearchTransactionsForm(forms.Form):
+    """Django form for searching Algorand transactions."""
+
     note_prefix = forms.CharField(required=False)
     address = forms.CharField(required=False)
     asset_id = forms.CharField(required=False, label="Asset ID")
@@ -84,7 +92,7 @@ class SearchTransactionsForm(forms.Form):
             ("axfer", "Asset freeze"),
             ("afrz", "Asset transfer"),
         ],
-        label="Transaction type"
+        label="Transaction type",
     )
 
     def clean_note_prefix(self):
@@ -96,6 +104,6 @@ class SearchTransactionsForm(forms.Form):
         """Ensure at least one field is non-empty."""
         cleaned_data = super().clean()
         if all(val == "" for val in cleaned_data.values()):
-            raise ValidationError("You should fill at least one field!")
+            raise ValidationError("You must fill at least one field!")
 
         return cleaned_data

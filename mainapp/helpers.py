@@ -40,9 +40,11 @@ def _sandbox_executable():
 def cli_passphrase_for_account(address):
     """Return passphrase for provided address."""
     process = _call_sandbox_command("goal", "account", "export", "-a", address)
+    passphrase = ""
     for line in io.TextIOWrapper(process.stdout):
         parts = line.split('"')
-        passphrase = parts[1] if len(parts) > 1 else ""
+        if len(parts) > 1:
+            passphrase = parts[1]
     return passphrase
 
 
@@ -127,6 +129,7 @@ def add_transaction(sender, receiver, passphrase, amount, note):
 
 ## CREATING
 def add_asset(data):
+    """Create asset from provided data dictionary."""
     client = _algod_client()
     params = client.suggested_params()
     unsigned_txn = AssetConfigTxn(
@@ -154,8 +157,8 @@ def add_asset(data):
         return None, err  # None implies non-field error
 
     try:
-        ptx = client.pending_transaction_info(transaction_id)
-        asset_id = ptx.get("asset-index")
+        info = client.pending_transaction_info(transaction_id)
+        asset_id = info.get("asset-index")
         return asset_id, ""
 
     except Exception as err:
