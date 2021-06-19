@@ -1,4 +1,4 @@
-from algosdk.constants import address_len, hash_len
+from algosdk.constants import address_len, hash_len, max_asset_decimals
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -46,7 +46,8 @@ class Asset(models.Model):
         validators=[MinValueValidator(1)],
     )
     decimals = models.IntegerField(
-        blank=False, validators=[MinValueValidator(0), MaxValueValidator(20)]
+        blank=False,
+        validators=[MinValueValidator(0), MaxValueValidator(max_asset_decimals)],
     )
     frozen = models.BooleanField(blank=False, default=False)
     url = models.URLField(blank=True)

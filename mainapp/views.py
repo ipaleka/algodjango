@@ -114,6 +114,7 @@ def create_wallet_account(request, wallet_id):
 
 def index(request):
     """Display all the created standalone accounts."""
+
     accounts = Account.objects.exclude(walletaccount__isnull=False).order_by("-created")
     context = {"accounts": accounts}
     return render(request, "mainapp/index.html", context)
