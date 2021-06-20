@@ -1,4 +1,4 @@
-# algorand-django
+# algodjango
 
 Django project presenting some Algorand's blockchain processes with the help of `py-algorand-sdk` package.
 
@@ -81,7 +81,7 @@ After that, you'll be able to start the Django development server:
 
 Point your browser to http://127.0.0.1:8000/ and you should see the starting page:
 
-![algorand-django starting page](https://github.com/ipaleka/algorand-django/blob/main/media/starting-page.png?raw=true)
+![algodjango starting page](https://github.com/ipaleka/algodjango/blob/main/media/starting-page.png?raw=true)
 
 
 ## Troubleshooting
