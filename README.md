@@ -23,7 +23,7 @@ $ sudo apt-get install python3-venv
 ```bash
 $ tree -L 1
 .
-├── algorand-django
+├── algodjango
 └── sandbox
 ```
 
@@ -49,7 +49,7 @@ cd algorand
 Then clone both repositories:
 
 ```bash
-git clone https://github.com/ipaleka/algorand-django.git
+git clone https://github.com/ipaleka/algodjango.git
 git clone https://github.com/algorand/sandbox.git
 ```
 
@@ -75,7 +75,7 @@ Now change the directory to the project root directory and install the project d
 After that, you'll be able to start the Django development server:
 
 ```bash
-(algovenv) $ cd algorand-django
+(algovenv) $ cd algodjango
 (algovenv) $ python manage.py runserver
 ```
 
@@ -96,7 +96,7 @@ If you want a fresh start, issue the following for the Sandbox:
 Then delete the SQLite database file of the project and recreate it with the `migrate` Django management command:
 
 ```bash
-(algovenv) $ cd algorand-django
+(algovenv) $ cd algodjango
 (algovenv) $ rm db.sqlite3
 (algovenv) $ python manage.py migrate
 ```

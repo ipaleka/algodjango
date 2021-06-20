@@ -1,6 +1,6 @@
 # Introduction
 
-The purpose of this tutorial is to introduce the reader to the Algorand SDK and its implementation in Django framework.
+The purpose of this tutorial is to introduce the reader to the [Algorand SDK](https://developer.algorand.org/docs/reference/sdks/) and its implementation in [Django framework](https://www.djangoproject.com/).
 
 
 
@@ -9,13 +9,13 @@ The purpose of this tutorial is to introduce the reader to the Algorand SDK and 
 
 # Requirements
 
-This tutorial uses a Python wrapper around Algorand SDK, so you should have Python 3 installed on your system. Also, this tutorial uses `python3-venv` package for creating virtual environments and you have to install it if it's not already installed in your system. For a Debian/Ubuntu based systems, you can do that by issuing the following command:
+This tutorial uses a [Python](https://www.python.org/) wrapper around Algorand SDK, so you should have Python 3 installed on your system. Also, this tutorial uses `python3-venv` package for creating virtual environments and you have to install it if it's not already installed in your system. For a Debian/Ubuntu based systems, you can do that by issuing the following command:
 
 ```bash
 $ sudo apt-get install python3-venv
 ```
 
-In order to clone the Algorand Sandbox (as opposite to just download its installation archive), you'll also need [Git](https://git-scm.com/).
+In order to clone the Algorand Sandbox (as opposite to just download its installation archive), you'll also need [Git distributed version control system](https://git-scm.com/).
 
 
 # Setup and run Algorand Sandbox
@@ -50,7 +50,7 @@ This tutorial code implies that the Sandbox executable is in the `sandbox` direc
 ```bash
 $ tree -L 1
 .
-├── algorand-django
+├── algodjango
 └── sandbox
 ```
 
@@ -137,7 +137,7 @@ That creates a new directory inside project's root directory with the following 
 └── manage.py
 ```
 
-We need one more thing before we start writting our app code. Use your favorite editor and open the `settings.py` file placed in the project's directory. Find the `INSTALLED_APPS` setting and prepend the list with our app's configuration class. Afterward, that setting should look like this:
+We need one more thing before we start writing our app code. Use your favorite editor and open the `settings.py` file placed in the project's directory. Find the `INSTALLED_APPS` setting and prepend the list with our app's configuration class. Afterward, that setting should look like this:
 
 ```python
 INSTALLED_APPS = [
@@ -168,9 +168,243 @@ Starting development server at http://127.0.0.1:8000/
 Quit the server with CONTROL-C.
 ```
 
-Point your server to the presented URL (http://127.0.0.1:8000/) and you should see a page similar to the following one:
+Ignore that warning about unapplied migrations for now and point your browser to the specified URL (http://127.0.0.1:8000/). You should see a page similar to the following one:
 
-![Django starting page](https://github.com/ipaleka/algorand-django/blob/main/media/django-starting-page.png?raw=true)
+![Django starting page](https://github.com/ipaleka/algodjango/blob/main/media/django-starting-page.png?raw=true)
 
 If all goes well then you're ready to start writing code for your Algorand application.
 
+
+# Our first Django page
+
+In the next few sections we're going to configure and create code for our project's first Django-based HTML page.
+
+
+## Application's URL configuration
+
+Django URL dispatcher routes predefined urls to Django views and that URL configuration is placed in the `urls.py` file in the project directory. We'll create a separate URL configuration file inside our main application directory and change the project's URL dispatcher to include that newly created configuration:
+
+Project's URL dispatcher `algodjango/urls.py`:
+
+```python
+from django.contrib import admin
+from django.urls import include, path
+
+urlpatterns = [
+    path("admin/", admin.site.urls),
+    path("", include("mainapp.urls")),
+]
+```
+
+Create a new python module `mainapp/urls.py` with the following content:
+
+```python
+from django.urls import path
+
+from . import views
+
+urlpatterns = [
+    path("", views.index, name="index"),
+]
+```
+
+## Root page view
+
+Now every request in your browser to the root page of the site (an empty string as URL defines the root page of the site - in the case of our development server that would be http://127.0.0.1:8000/) will execute code from the `index` function found inside `mainapp/views.py` module.
+
+---
+**Note**
+
+You may implement Django views in two different ways: as the function based views or as the class-based views. Please take your time to familiarize with the class-based views in Django because they can make your coding more powerful and more secure, but for the purpose of technology introduction to the readers, like in this tutorial, the function-based views are probably easier to grasp on and so are the better choice.
+
+---
+
+Our root/index page will be used to display the list of all created [standalone accounts](https://developer.algorand.org/docs/features/accounts/) in our application. Beside those standalone accounts, in our app we'll be creating and displaying accounts connected to the wallets. There are other type of accounts that are entities in the Algorand blockchain, like special or multisignature accounts, but those are out of scope for this tutorial.
+
+Update the `views.py` module with the code as follows:
+
+```python
+from django.shortcuts import render
+
+from .models import Account
+
+
+def index(request):
+    """Display all the created standalone accounts."""
+
+    accounts = Account.objects.order_by("-created")
+    context = {"accounts": accounts}
+    return render(request, "mainapp/index.html", context)
+```
+
+So, we fetch all the account objects from the database (we'll get to that code related to database in a minute) and we pass them in the form of a Python dictionary as the context of the index page template (another code yet to be created) rendered by Django framework.
+
+---
+**Note**
+
+We may use the Algorand SDK for the same purpose of fetching created accounts, but keeping those records in the application database surely represents a real-world application.
+
+---
+
+## Account model
+
+[Django model](https://docs.djangoproject.com/en/3.2/topics/db/models/) is a class that represents a table in your database. The default database engine of a newly created Django project is the SQLite and we're going to use it in this tutorial. That engine creates a single file in the project's root directory named `db.sqlite3` which represents our database.
+
+For the account model, we record only the account addresses and the time when they are created. The rest of account information aren't kept in our database, while keeping the account passphrase is up to the user.
+
+Edit the `models.py` module and add the following code:
+
+```python
+from algosdk.constants import address_len
+from django.db import models
+
+
+class Account(models.Model):
+    """Base model class for Algorand accounts."""
+
+    address = models.CharField(max_length=address_len)
+    created = models.DateTimeField(auto_now_add=True)
+
+    def balance(self):
+        """Return this instance's balance in microAlgos."""
+        return 0
+```
+
+In order to apply those changes to our database, run the following Django management commands:
+
+```bash
+(algovenv) $ python manage.py makemigrations
+(algovenv) $ python manage.py migrate
+```
+
+If you start the development server now, you can see that the warning from the above (about unapplied migrations) has gone.
+
+
+## Index page template
+
+In order to render the accounts data in the browser, we must create a Django template of our index page. The default placement for such template is in the `mainapp` subdirectory of the `templates` directory inside our application directory:
+
+```bash
+(algovenv) $ mkdir -p mainapp/templates/mainapp
+```
+
+Now create the following two files in that directory:
+
+`mainapp/templates/mainapp/base.html`
+```html
+{% load static %}<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Accounts{% endblock %}</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'mainapp/style.css' %}">
+  </head>
+  <body>
+    <div class="topnav">
+      <a href="/"{% if request.path == '/' %} class="active"{% endif %}>Standalone accounts</a>
+    </div>
+    <div class="body">{% block body %}{% endblock %}</div>
+  </body>
+</html>
+```
+
+`mainapp/templates/mainapp/index.html`
+```html
+{% extends 'mainapp/base.html' %}
+{% block title %}Standalone accounts{% endblock %}
+{% block body %}
+  <h1>Standalone accounts list</h1>
+  {% if accounts %}
+  <ul>
+  {% for account in accounts %}
+    <li><a href="/standalone-account/{{ account.address }}">{{ account.address }}</a> : {{ account.balance }} microAlgos</li>
+  {% endfor %}
+  </ul>
+  {% else %}
+  <p>There are no standalone accounts.</p>
+  {% endif %}
+  <br>
+  <a href="/create-standalone/">Create standalone account</a>
+{% endblock %}
+```
+
+We're going to use that `base.html` for all of our templates in this tutorial. In short, based on the [DRY principle](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) and with the help of the [Django template system](https://docs.djangoproject.com/en/3.2/topics/templates/), our templates will share the HTML page headers and the navigation bar. We *extend* that base template and change the defined *blocks* of data.
+
+As you can see from the index template, we loop through the context's `accounts` that we provided to the template in our index view and for each account we create an unordered list item with a link to that account's detail page (a template we haven't created yet).
+
+
+## CSS styling
+
+We need to do one more thing before we point our browser to the index page - styling our pages! This part is optional and it won't change the tutorial's functionality, but maybe it will help you in configuring your future Django-based Algorand's projects.
+
+As you can see from the `base.html` template, the CSS for our site is located in the `style.css` file. The default placement for the [static files](https://docs.djangoproject.com/en/3.2/howto/static-files/) in Django projects is similar to templates:
+
+```bash
+(algovenv) $ mkdir -p mainapp/static/mainapp
+```
+
+Now create the `style.css` in that directory with the following content:
+
+```css
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.body {
+    margin: 5px;
+}
+
+.topnav {
+    overflow: hidden;
+    background-color: #222;
+}
+
+.topnav a {
+    float: left;
+    color: #fbfbfb;
+    text-align: center;
+    padding: 12px 12px;
+    text-decoration: none;
+    font-size: 16px;
+}
+
+.topnav a:hover {
+    background-color: #eee;
+    color: black;
+}
+
+.topnav a.active {
+    background-color: #5d6d7e;
+    color: white;
+}
+```
+
+Run the development server now (`python manage.py runserver`) and point your browser to the root page (`http://127.0.0.1:8000/`). If all goes well, you should see the index that looks like this:
+
+![Index page](https://github.com/ipaleka/algodjango/blob/main/media/index-starting-page.png?raw=true)
+
+Congratulations on your first Django page!
+
+
+# Getting started with Algorand SDK
+
+All the sections and code from previous sections can be used for the general purpose of creating web pages with Django. That introduction steps were needed to get you familiarized with the basic Django principles and now we're finally ready to start using Algorand SDK!
+
+
+
+In the next few sections we're going to configure and create code for our project's first Django-based HTML page.
+
+
+
+
+
+
+**after creating the wallets accounts change the index 
+    accounts = Account.objects.exclude(walletaccount__isnull=False).order_by("-created")
+
+
+**update CSS file after adding 
+- message
+- form errors
+- tables

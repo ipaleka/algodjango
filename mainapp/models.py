@@ -8,7 +8,7 @@ from .helpers import account_balance, account_transactions
 
 
 class Account(models.Model):
-    """Base model class for standalone and wallet accounts."""
+    """Base model class for standalone and wallet Algorand accounts."""
 
     address = models.CharField(max_length=address_len)
     created = models.DateTimeField(auto_now_add=True)
