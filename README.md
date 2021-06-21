@@ -93,7 +93,7 @@ If you want a fresh start, issue the following for the Sandbox:
 ./sandbox/sandbox up
 ```
 
-Then delete the SQLite database file of the project and recreate it with the `migrate` Django management command:
+Then delete the SQLite database file and recreate it with the `migrate` Django management command:
 
 ```bash
 (algovenv) $ cd algodjango

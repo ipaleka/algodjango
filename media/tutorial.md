@@ -549,11 +549,7 @@ Let's create the related URL and view:
 ```python
 urlpatterns = [
     #
-    path(
-        "standalone-account/<str:address>/",
-        views.standalone_account,
-        name="standalone-account",
-    ),
+    path("initial-funds/<str:receiver>/", views.initial_funds, name="initial-funds"),
 ]
 ```
 
@@ -740,6 +736,121 @@ And now you're ready to transfer the initial funds to your account. Point your b
 
 
 ## Display account's transactions
+
+The account page should display a list of all created transactions. Edit the account model and add the following method:
+
+`mainapp\models.py`
+
+```python
+from .helpers import account_transactions
+
+
+class Account(models.Model):
+    #
+    def transactions(self):
+        """Return all the transactions involving this account."""
+        return account_transactions(self.address)
+```
+
+The code that will return the list of provided [account's transactions](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/v2client/indexer.html#algosdk.v2client.indexer.IndexerClient.search_transactions_by_address) is placed in the `account_transactions` helper function:
+
+`mainapp\helpers.py`
+
+```python
+def account_transactions(address):
+    """Return all transactions involving provided address."""
+    transactions = (
+        _indexer_client()
+        .search_transactions_by_address(address)
+        .get("transactions", [])
+    )
+    return [
+        {
+            "id": tr.get("id"),
+            "round": tr.get("confirmed-round"),
+            "type": tr.get("tx-type"),
+            "sender": tr.get("sender"),
+            "receiver": tr.get("payment-transaction", {}).get("receiver"),
+            "amount": tr.get("payment-transaction", {}).get("amount"),
+            "note": base64.b64decode(tr.get("note", "")).decode("utf-8"),
+        }
+        for tr in transactions
+    ]
+```
+
+You can see that transactions notes in the Algorand blockchain are base64 encoded, so we have to decode them in order to present them in a human-readable way.
+
+Update the base account template by adding the following code just before the `{% endblock body %}` tag:
+
+`mainapp\templates\mainapp\base_account.html`
+
+```html
+  <h2>Transactions</h2>
+  <table class="full-width">
+  <tr>
+    <th>ID</th>
+    <th>Round/Type</th>
+    <th>Sender/Receiver</th>
+    <th>Amount</th>
+    <th>Note</th>
+  </tr>
+  {% for transaction in account.transactions %}
+  <tr>
+    <td rowspan="2">{{ transaction.id }}</td>
+    <td>{{ transaction.round }}</td>
+    <td>{{ transaction.sender }}</td>
+    <td rowspan="2">{{ transaction.amount }}</td>
+    <td rowspan="2">{{ transaction.note }}</td>
+  </tr>
+  <tr>
+    <td>{{ transaction.type }}</td>
+    <td>{{ transaction.receiver }}</td>
+  </tr>
+  {% endfor %}
+</table>
+```
+
+Also, add the following rules to our CSS:
+
+`mainapp/static/mainapp/style.css`
+
+```css
+table.full-width {
+    width: 100%;
+}
+
+th {
+    text-align: left;
+}
+```
+
+From now on, every account's transaction will be displayed as a table row at the end of the account page.
+
+
+## Transfer funds functionality
+
+In this section we'll use one of the most powerful Django beasts - its forms system.
+
+For the start, edit the base account page template once more and add the the following link just before the transactions table:
+
+`mainapp\templates\mainapp\base_account.html`
+
+```html
+<a href="/transfer-funds/{{ account.address }}/">Transfer funds</a>
+```
+
+The URL configuration should look like:
+
+`mainapp/urls.py`
+
+```python
+urlpatterns = [
+    #
+    path("transfer-funds/<str:sender>/", views.transfer_funds, name="transfer-funds"),
+]
+```
+
+
 
 
 
