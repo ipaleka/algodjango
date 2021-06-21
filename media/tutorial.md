@@ -190,6 +190,7 @@ Project's URL dispatcher `algodjango/urls.py`:
 from django.contrib import admin
 from django.urls import include, path
 
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", include("mainapp.urls")),
@@ -202,6 +203,7 @@ Create a new python module `mainapp/urls.py` with the following content:
 from django.urls import path
 
 from . import views
+
 
 urlpatterns = [
     path("", views.index, name="index"),
@@ -328,14 +330,14 @@ Now create the following two files in that directory:
 {% endblock %}
 ```
 
-We're going to use that `base.html` for all of our templates in this tutorial. In short, based on the [DRY principle](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) and with the help of the [Django template system](https://docs.djangoproject.com/en/3.2/topics/templates/), our templates will share the HTML page headers and the navigation bar. We *extend* that base template and change the defined *blocks* of data.
+We're going to use this `base.html` in all of our templates in this tutorial. In short, based on the [DRY principle](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) and with the help of the [Django template system](https://docs.djangoproject.com/en/3.2/topics/templates/), our templates will share the same HTML page headers and the navigation bar. As you might have already guessed from these templates, we *extend* the base template and change the defined *blocks* of data in the derived templates.
 
-As you can see from the index template, we loop through the context's `accounts` that we provided to the template in our index view and for each account we create an unordered list item with a link to that account's detail page (a template we haven't created yet).
+In the index template, we loop through the context's `accounts` - the value we provided to the template in our index view. For each account we create an unordered list item with a link to that account's detail page (a template we haven't created yet).
 
 
 ## CSS styling
 
-We need to do one more thing before we point our browser to the index page - styling our pages! This part is optional and it won't change the tutorial's functionality, but maybe it will help you in configuring your future Django-based Algorand's projects.
+We need to do one more thing before we point our browser to the index page - improve the aesthetic of our pages! This part is optional and it won't change the tutorial's functionality, but maybe it will help you in configuring your future Django-based Algorand's projects.
 
 As you can see from the `base.html` template, the CSS for our site is located in the `style.css` file. The default placement for the [static files](https://docs.djangoproject.com/en/3.2/howto/static-files/) in Django projects is similar to templates:
 
@@ -343,7 +345,7 @@ As you can see from the `base.html` template, the CSS for our site is located in
 (algovenv) $ mkdir -p mainapp/static/mainapp
 ```
 
-Now create the `style.css` in that directory with the following content:
+Now create the `style.css` file in that directory with the following content:
 
 ```css
 body {
@@ -392,10 +394,75 @@ Congratulations on your first Django page!
 All the sections and code from previous sections can be used for the general purpose of creating web pages with Django. That introduction steps were needed to get you familiarized with the basic Django principles and now we're finally ready to start using Algorand SDK!
 
 
+## Standalone account creation
 
-In the next few sections we're going to configure and create code for our project's first Django-based HTML page.
+We created a link in the index page to the page used for creation of a standalone account. Now, update app's `urls.py` and `views.py` modules with the related code.
+
+`mainapp/urls.py`
+
+```python
+urlpatterns = [
+    #
+    path("create-standalone/", views.create_standalone, name="create-standalone"),
+]
+```
+
+`mainapp/views.py`
+
+```python
+from .helpers import add_standalone_account
 
 
+def create_standalone(request):
+    """Create standalone account."""
+    address, passphrase = add_standalone_account()
+    Account.objects.create(address=address)
+    context = {"account": (address, passphrase)}
+    return render(request, "mainapp/create_standalone.html", context)
+```
+
+As you can see, we introduced a new module named `helpers.py`. That module will hold all the Algorand functionality code of our project. Create that module in the mainapp directory with the following content:
+
+`mainapp/helpers.py`
+
+```python
+from algosdk import account, mnemonic
+
+
+def add_standalone_account():
+    """Create standalone account and return two-tuple of its address and passphrase."""
+    private_key, address = account.generate_account()
+    passphrase = mnemonic.from_private_key(private_key)
+    return address, passphrase
+```
+
+This code that uses Algorand SDK should be straightforward: we [created an account](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/account.html#algosdk.account.generate_account) and used returned private key to get the [account's passphrase](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/mnemonic.html#algosdk.mnemonic.from_private_key).
+
+
+Now create the template that will be rendered upon account creation.
+
+`mainapp/templates/mainapp/create_standalone.html`
+
+```html
+{% extends 'mainapp/base.html' %}
+{% block title %}Create standalone account{% endblock %}
+{% block body %}
+  <h1>New standalone account</h1>
+  {% if account %}
+  <p>Your standalone account has been created. Please write down the following data:</p>
+  <p><strong>Address</strong>: {{ account.0 }}</p>
+  <p><strong>Passphrase</strong>: {{ account.1 }}</p>
+  <br>
+  <a href="/initial-funds/{{ account.0 }}/">Add initial funds</a>
+  {% endif %}
+{% endblock %}
+```
+
+We provided a two-tuple (a tuple consisting of two items) as the context to this template and in this template its values are retrieved by the related indexes.
+
+Go to the index page, click the link entitled `Create standalone account` and you should see the page that looks like:
+
+![Create standalone account](https://github.com/ipaleka/algodjango/blob/main/media/create-standalone-page.png?raw=true)
 
 
 
