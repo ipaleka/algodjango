@@ -5,13 +5,14 @@ import subprocess
 from pathlib import Path
 
 from algosdk import account, kmd, mnemonic
+from algosdk.constants import microalgos_to_algos_ratio
 from algosdk.future.transaction import AssetConfigTxn, PaymentTxn
 from algosdk.v2client import algod, indexer
 from algosdk.wallet import Wallet
 
 from algosdk.error import WrongChecksumError
 
-INITIAL_FUNDS = 1000000000
+INITIAL_FUNDS = 1000000000  # in microAlgos
 
 
 ## SANDBOX
@@ -225,7 +226,7 @@ def initial_funds_sender():
             account.get("address")
             for account in _indexer_client().accounts().get("accounts", [])
             if account.get("created-at-round") == 0
-            and account.get("amount") > INITIAL_FUNDS
+            and account.get("amount") > INITIAL_FUNDS + microalgos_to_algos_ratio / 10
         ),
         None,
     )

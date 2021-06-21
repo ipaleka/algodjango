@@ -128,15 +128,16 @@ def initial_funds(request, receiver):
     """
     sender = initial_funds_sender()
     if sender is None:
-        return render(request, "mainapp/initial_funds.html", {})
-
-    add_transaction(
-        sender,
-        receiver,
-        cli_passphrase_for_account(sender),
-        INITIAL_FUNDS,
-        "Initial funds",
-    )
+        message = "Initial funds weren't transferred!"
+        messages.add_message(request, messages.ERROR, message)
+    else:
+        add_transaction(
+            sender,
+            receiver,
+            cli_passphrase_for_account(sender),
+            INITIAL_FUNDS,
+            "Initial funds",
+        )
     return redirect("standalone-account", receiver)
 
 

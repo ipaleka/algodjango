@@ -31,7 +31,7 @@ body {
     color: white;
 }
 
-ul.errorlist li {
+ul.errorlist li, ul.messages li.error {
     color: red;
 }
 

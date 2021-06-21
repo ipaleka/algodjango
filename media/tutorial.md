@@ -465,13 +465,284 @@ Go to the index page, click the link entitled `Create standalone account` and yo
 ![Create standalone account](https://github.com/ipaleka/algodjango/blob/main/media/create-standalone-page.png?raw=true)
 
 
+## Initial funds for the standalone accounts
+
+Algorand Sandbox operates either in a real network mode (using one of the Algorand's [public networks](https://developer.algorand.org/docs/reference/algorand-networks/)) or in a private network mode. In the former case, you may use the Testnet and add funds to your account in the [Algorand dispenser](https://bank.testnet.algorand.network/), but in this tutorial we use the private network mode which has been the default setup for the Sandbox. Algorand Sandbox creates some test accounts filled with Algos and we'll use one of those accounts to transfer initial funds to the accounts created by our application.
+
+The following code in `helpers.py` module is responsible for retrieving the address of a test account (created by Sandbox) that has enough funds (funds to transfer plus minimum requirement of 0.1 Algo) which can be transferred to our accounts:
+
+```python
+from algosdk.constants import microalgos_to_algos_ratio
+from algosdk.v2client import indexer
+
+INITIAL_FUNDS = 1000000000  # in microAlgos
+
+
+def _indexer_client():
+    """Instantiate and return Indexer client object."""
+    indexer_address = "http://localhost:8980"
+    indexer_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    return indexer.IndexerClient(indexer_token, indexer_address)
+
+
+def initial_funds_sender():
+    """Get the address of initially created account having enough funds."""
+    return next(
+        (
+            account.get("address")
+            for account in _indexer_client().accounts().get("accounts", [])
+            if account.get("created-at-round") == 0
+            and account.get("amount") > INITIAL_FUNDS + microalgos_to_algos_ratio / 10
+        ),
+        None,
+    )
+```
+
+Every transaction in the Algorand blockchain has to be signed by the sender account, so we also need the passphrase of the sender account. We use Python capabilities for communicating with command line interfaces and running Sandbox process to export that passphrase using Algorand's `goal` command:
+
+`mainapp\helpers.py`
+
+```python
+import io
+import os
+import subprocess
+from pathlib import Path
+
+
+def _call_sandbox_command(*args):
+    """Call and return sandbox command composed from provided arguments."""
+    return subprocess.Popen(
+        [_sandbox_executable(), *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
+def _sandbox_executable():
+    """Return full path to Algorand's sandbox executable.
+
+    The location of sandbox directory is retrieved either from the SANDBOX_DIR
+    environment variable or if it's not set then the location of sandbox directory
+    is implied to be the sibling of this Django project in the directory tree.
+    """
+    sandbox_dir = os.environ.get("SANDBOX_DIR") or str(
+        Path(__file__).resolve().parent.parent.parent / "sandbox"
+    )
+    return sandbox_dir + "/sandbox"
+
+
+def cli_passphrase_for_account(address):
+    """Return passphrase for provided address."""
+    process = _call_sandbox_command("goal", "account", "export", "-a", address)
+    passphrase = ""
+    for line in io.TextIOWrapper(process.stdout):
+        parts = line.split('"')
+        if len(parts) > 1:
+            passphrase = parts[1]
+    return passphrase
+```
+
+Let's create the related URL and view:
+
+`mainapp/urls.py`
+
+```python
+urlpatterns = [
+    #
+    path(
+        "standalone-account/<str:address>/",
+        views.standalone_account,
+        name="standalone-account",
+    ),
+]
+```
+
+`mainapp\views.py`
+
+```python
+from django.contrib import messages
+from django.shortcuts import redirect
+
+from .helpers import (
+    INITIAL_FUNDS,
+    add_transaction,
+    cli_passphrase_for_account,
+    initial_funds_sender,
+)
+
+
+def initial_funds(request, receiver):
+    """Add initial funds to provided standalone receiver account."""
+    sender = initial_funds_sender()
+    if sender is None:
+        message = "Initial funds weren't transferred!"
+        messages.add_message(request, messages.ERROR, message)
+    else:
+        add_transaction(
+            sender,
+            receiver,
+            cli_passphrase_for_account(sender),
+            INITIAL_FUNDS,
+            "Initial funds",
+        )
+    return redirect("standalone-account", receiver)
+```
+
+We'll get to the `add_transaction` function in a minute, let's first create the template where this view redirects:
+
+`mainapp\templates\mainapp\standalone_account.html`
+
+```html
+{% extends 'mainapp/base_account.html' %}
+```
+
+We use the base template as we're going to code the wallet-based accounts functionality in this tutorial that will use the same base template:
+
+`mainapp\templates\mainapp\base_account.html`
+
+```html
+{% extends 'mainapp/base.html' %}
+{% block title %}Account page{% endblock %}
+{% block body %}
+  <h1>{% block prefix %}Standalone{% endblock prefix %} account page</h1>
+  {% block start %}{% endblock start %}
+  <p>Address: {{ account.address }}</p>
+  <p>Created: {{ account.created }}</p>
+  <p>Balance: {{ account.balance }} microAlgos</p>
+  <br>
+  {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+{% endblock body %}
+```
+
+As you can see from the presented code, if the initial funds transfer fails then the [error message](https://docs.djangoproject.com/en/3.2/ref/contrib/messages/) is rendered. Update our styling CSS too so the error text is displayed in red:
+
+`mainapp/static/mainapp/style.css`
+
+```css
+ul.messages li.error {
+    color: red;
+}
+
+ul.messages li.success {
+    color: green;
+}
+```
+
+One more thing we should do before we get to the `add_transaction` SDK call - we need to update the account model with the proper `balance` method:
+
+`mainapp\models.py`
+
+```python
+from .helpers import account_balance
+
+class Account(models.Model):
+    #
+
+    def balance(self):
+        """Return this instance's balance in microAlgos."""
+        return account_balance(self.address)
+
+```
+
+The code for that `account_balance` helper function should be straightforward: we use predefined (by Algorand Sandbox) tokens and API endpoints to instantiate Algod client and then we use the `account_info` method of that client to retrieve the funds amount in microAlgos.
+
+`mainapp\helpers.py`
+
+```python
+from algosdk.v2client import algod
+
+
+def _algod_client():
+    """Instantiate and return Algod client object."""
+    algod_address = "http://localhost:4001"
+    algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    return algod.AlgodClient(algod_token, algod_address)
+
+
+def account_balance(address):
+    """Return funds balance of the account having provided address."""
+    account_info = _algod_client().account_info(address)
+    return account_info.get("amount")
+```
+
+## Create and sign a transaction on the Algorand blockchain
+
+`mainapp\helpers.py`
+
+```python
+from algosdk.future.transaction import PaymentTxn
+from algosdk.error import WrongChecksumError
+
+
+def add_transaction(sender, receiver, passphrase, amount, note):
+    """Create and sign transaction from provided arguments."""
+
+    client = _algod_client()
+    params = client.suggested_params()
+    unsigned_txn = PaymentTxn(sender, params, receiver, amount, None, note.encode())
+    try:
+        signed_txn = unsigned_txn.sign(mnemonic.to_private_key(passphrase))
+    except WrongChecksumError:
+        return "passphrase", "Checksum failed to validate"
+    except ValueError:
+        return "passphrase", "Unknown word in passphrase"
+
+    transaction_id = client.send_transaction(signed_txn)
+    try:
+        _wait_for_confirmation(client, transaction_id, 4)
+    except Exception as err:
+        return None, err  # None implies non-field error
+    return "", ""
+```
+
+The code for `_wait_for_confirmation` function is still our obligation for the version `1.5.0` of the `py-algorand-sdk`, but it will probably be a part of the Algorand's Python SDK in the future.
+
+`mainapp\helpers.py`
+
+```python
+def _wait_for_confirmation(client, transaction_id, timeout):
+    """
+    Wait until the transaction is confirmed or rejected, or until 'timeout'
+    number of rounds have passed.
+    Args:
+        transaction_id (str): the transaction to wait for
+        timeout (int): maximum number of rounds to wait
+    Returns:
+        dict: pending transaction information, or throws an error if the transaction
+            is not confirmed or rejected in the next timeout rounds
+    """
+    start_round = client.status()["last-round"] + 1
+    current_round = start_round
+
+    while current_round < start_round + timeout:
+        try:
+            pending_txn = client.pending_transaction_info(transaction_id)
+        except Exception:
+            return
+        if pending_txn.get("confirmed-round", 0) > 0:
+            return pending_txn
+        elif pending_txn["pool-error"]:
+            raise Exception("pool error: {}".format(pending_txn["pool-error"]))
+        client.status_after_block(current_round)
+        current_round += 1
+    raise Exception(
+        "pending tx not found in timeout rounds, timeout value = : {}".format(timeout)
+    )
+```
+
+And now you're ready to transfer the initial funds to your account. Point your browser to the index page, create a standalone account, click the `Add initial funds` link, wait no more than 5 seconds for the transaction confirmation on the blockchain and - voilà! - you've got your Algos!
+
+
+## Display account's transactions
+
 
 
 **after creating the wallets accounts change the index 
     accounts = Account.objects.exclude(walletaccount__isnull=False).order_by("-created")
 
-
-**update CSS file after adding 
-- message
-- form errors
-- tables
