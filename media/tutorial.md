@@ -1064,6 +1064,8 @@ A user defines the name and password of the wallet, while Algorand SDK creates i
 `mainapp\models.html`
 
 ```python
+from algosdk.constants import hash_len
+
 
 class Wallet(models.Model):
     """Model class for wallets."""
@@ -1653,7 +1655,7 @@ If Algorand SDK successfully manages to create a transaction, then a success mes
 
 # Wallets creation
 
-We created Algorand's standalone accounts in the previous sections that aren't connected to any wallet. Now we're going to create both the wallets and the accounts connected to them.
+We created Algorand's standalone accounts in the previous sections that aren't connected to any wallet. Now we're going to create both the [wallets](https://developer.algorand.org/docs/features/accounts/#wallets) and the accounts connected to them.
 
 Update the app's URL configuration with all the URL we+re going to manage in this section:
 
@@ -1838,6 +1840,7 @@ The views and related code involved in the wallet creating and displaying proces
 ```python
 from .forms import CreateWalletForm
 from .helpers import add_wallet, get_wallet
+from .models import Wallet, WalletAccount
 
 
 def create_wallet(request):
@@ -1948,3 +1951,259 @@ def index(request):
 
 
 # Assets creation
+
+In this section, we're going to create [the Algorand assets](https://developer.algorand.org/docs/features/asa/) in our application.
+
+The URL configuration for the assets-related pages looks like this:
+
+`mainapp/urls.py`
+
+```python
+urlpatterns = [
+    #
+    path("assets/", views.assets, name="assets"),
+    path("create-asset/", views.create_asset, name="create-asset"),
+]
+```
+
+Update the base template and add another item to the navigation bar:
+
+`mainapp\templates\mainapp\base.html`
+
+```html
+    <div class="topnav">
+      <a href="/"{% if request.path == '/' %} class="active"{% endif %}>Standalone accounts</a>
+      <a href="/wallets/"{% if request.path == '/wallets/' %} class="active"{% endif %}>Wallets</a>
+      <a href="/assets/"{% if request.path == '/assets/' %} class="active"{% endif %}>Assets</a>
+    </div>
+```
+
+The assets list page follows the same structure as the other Algorand entity pages we have created before. The assets are shown in the form of table where each row represents a single asset from our database:
+
+`mainapp\templates\mainapp\assets.html`
+
+```html
+{% extends 'mainapp/base.html' %}
+{% block title %}Assets{% endblock %}
+{% block body %}
+  <h1>Assets list</h1>
+  {% if assets %}
+  <table class="full-width">
+  <tr>
+    <th>ID/Frozen</th>
+    <th>Name/Unit</th>
+    <th>Total/Decimals</th>
+    <th>Url/Metadata</th>
+    <th>Creator</th>
+    <th>Manager/Reserve</th>
+    <th>Freeze/Clawback</th>
+  </tr>
+  {% for asset in assets %}
+  <tr>
+    <td>{{ asset.asset_id }}</td>
+    <td>{{ asset.name }}</td>
+    <td>{{ asset.total }}</td>
+    <td>{{ asset.url }}</td>
+    <td rowspan="2">{{ asset.creator }}</td>
+    <td>{{ asset.manager }}</td>
+    <td>{{ asset.freeze }}</td>
+  </tr>
+  <tr>
+    <td>{{ asset.frozen }}</td>
+    <td>{{ asset.unit }}</td>
+    <td>{{ asset.decimals }}</td>
+    <td>{{ asset.metadata }}</td>
+    <td>{{ asset.reserve }}</td>
+    <td>{{ asset.clawback }}</td>
+  </tr>
+  {% endfor %}
+  </table>
+  {% else %}
+  <p>There are no assets.</p>
+  {% endif %}
+  <br>
+  <a href="/create-asset/">Create asset</a>
+{% endblock %}
+```
+
+The template for the asset creation uses a familiar structure with a form rendered as a table:
+
+`mainapp\templates\mainapp\create_asset.html`
+
+```html
+{% extends 'mainapp/base.html' %}
+{% block title %}Create asset{% endblock %}
+{% block body %}
+  <h1>Create asset</h1>
+  <form action="/create-asset/" method="post">
+    {% csrf_token %}
+    <table>{{ form.as_table }}</table>
+    <input type="submit" value="Submit">
+  </form>
+{% endblock %}
+```
+
+The asset model is responsible for saving the same asset properties we already presented in the assets list page template:
+
+`mainapp\models.py`
+
+```python
+from algosdk.constants import max_asset_decimals
+
+
+class Asset(models.Model):
+    """Model class for Algorand assets."""
+
+    asset_id = models.IntegerField(blank=False)
+    creator = models.CharField(max_length=address_len, blank=False)
+    name = models.CharField(max_length=hash_len, blank=True)
+    unit = models.CharField(max_length=8, blank=True)
+    total = models.IntegerField(
+        blank=False,
+        validators=[MinValueValidator(1)],
+    )
+    decimals = models.IntegerField(
+        blank=False,
+        validators=[MinValueValidator(0), MaxValueValidator(max_asset_decimals)],
+    )
+    frozen = models.BooleanField(blank=False, default=False)
+    url = models.URLField(blank=True)
+    metadata = models.CharField(max_length=hash_len, blank=True)
+    manager = models.CharField(max_length=address_len, blank=True)
+    reserve = models.CharField(max_length=address_len, blank=True)
+    freeze = models.CharField(max_length=address_len, blank=True)
+    clawback = models.CharField(max_length=address_len, blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+```
+
+The most interesting part in this section is the [Django model form](https://docs.djangoproject.com/en/3.2/topics/forms/modelforms/) that we use to display, validate and save entered data to the database:
+
+`mainapp\forms.py`
+
+```python
+class CreateAssetForm(forms.models.ModelForm):
+    """Django model form for creating Algorand assets."""
+
+    passphrase = CharField(required=True)
+
+    class Meta:
+        model = Asset
+        fields = (
+            "creator",
+            "name",
+            "unit",
+            "total",
+            "decimals",
+            "frozen",
+            "url",
+            "metadata",
+            "manager",
+            "reserve",
+            "freeze",
+            "clawback",
+        )
+```
+
+The additional field `passphrase` has not been a part of the asset's database record and it is used only to sign the transaction after the form is validated.
+
+![Asset creation](https://github.com/ipaleka/algodjango/blob/main/media/asset-creation-page.png?raw=true)
+
+The majority of the code in the views related to assets displaying and creating should be quite familiar to you by now:
+
+`mainapp\views.py`
+
+```python
+from .forms import CreateAssetForm
+from .helpers import add_asset
+from .models import Asset
+
+
+def assets(request):
+    """Display all the created assets."""
+    assets = Asset.objects.order_by("-created")
+    context = {"assets": assets}
+    return render(request, "mainapp/assets.html", context)
+
+
+def create_asset(request):
+    """Create Algorand asset from the form data."""
+    if request.method == "POST":
+
+        form = CreateAssetForm(request.POST)
+
+        if form.is_valid():
+
+            asset_id, error_description = add_asset(form.cleaned_data)
+            if error_description == "":
+
+                asset = form.save(commit=False)
+                asset.asset_id = asset_id
+                asset.save()
+
+                message = "Asset {} has been successfully created!".format(
+                    form.cleaned_data["name"]
+                )
+                messages.add_message(request, messages.SUCCESS, message)
+                return redirect("assets")
+
+            form.add_error(None, error_description)
+
+    else:
+        form = CreateAssetForm()
+
+    context = {"form": form}
+
+    return render(request, "mainapp/create_asset.html", context)
+```
+
+The only part that probably needs further explanation is the form-saving routine without committing. We use the form's `save` method for both the model-level validation purpose and to get back the wallet model instance. We then update that instance with the wallet ID provided to us by Algorand SDK and then we finally save the record in the database.
+
+The `add_asset` helper function instantiates the [AssetConfigTxn](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/future/transaction.html#algosdk.future.transaction.AssetConfigTxn) class with the user data provided by the form. The rest of the code is similar to the code we used to transfer the Algos between accounts:
+
+`mainapp\helpers.py`
+
+```python
+from algosdk.future.transaction import AssetConfigTxn
+
+
+def add_asset(data):
+    """Create asset from provided data dictionary."""
+    client = _algod_client()
+    params = client.suggested_params()
+    unsigned_txn = AssetConfigTxn(
+        sp=params,
+        sender=data.get("creator"),
+        asset_name=data.get("name"),
+        unit_name=data.get("unit"),
+        total=data.get("total"),
+        decimals=data.get("decimals"),
+        default_frozen=data.get("frozen"),
+        url=data.get("url"),
+        manager=data.get("manager"),
+        reserve=data.get("reserve"),
+        freeze=data.get("freeze"),
+        clawback=data.get("clawback"),
+        strict_empty_address_check=False,
+    )
+    # Sign with secret key of creator
+    signed_txn = unsigned_txn.sign(mnemonic.to_private_key(data.get("passphrase")))
+
+    transaction_id = client.send_transaction(signed_txn)
+    try:
+        _wait_for_confirmation(client, transaction_id, 4)
+    except Exception as err:
+        return None, err  # None implies non-field error
+
+    try:
+        info = client.pending_transaction_info(transaction_id)
+        asset_id = info.get("asset-index")
+        return asset_id, ""
+
+    except Exception as err:
+        return None, err
+```
+
+![Assets page](https://github.com/ipaleka/algodjango/blob/main/media/assets-page.png?raw=true)
+
+
+# Search transactions
