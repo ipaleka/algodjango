@@ -7,7 +7,7 @@ from .models import Asset
 
 
 class TransferFundsForm(forms.Form):
-    """Django form for transfering microAlgos between accounts."""
+    """Django form for transferring microAlgos between accounts."""
 
     passphrase = forms.CharField()
     receiver = forms.CharField(max_length=address_len)

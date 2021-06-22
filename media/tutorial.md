@@ -584,6 +584,8 @@ def initial_funds(request, receiver):
     return redirect("standalone-account", receiver)
 ```
 
+As you can see, the URL contains a receiver address and that address is supplied as a positional argument to the view.
+
 We'll get to the `add_transaction` function in a minute, let's first create the template where this view redirects:
 
 `mainapp\templates\mainapp\standalone_account.html`
@@ -668,6 +670,8 @@ def account_balance(address):
 ```
 
 ## Create and sign a transaction on the Algorand blockchain
+
+[Algorand](https://developer.algorand.org/docs/reference/transactions/) and [Python Algorand SDK](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/transaction.html) allow you to change various arguments in the transactions creating process according to your needs, We'll be using the suggested parameters by Algorand SDK for the purpose of this tutorial.
 
 `mainapp\helpers.py`
 
@@ -829,9 +833,9 @@ From now on, every account's transaction will be displayed as a table row at the
 
 ## Transfer funds functionality
 
-In this section we'll use one of the most powerful Django beasts - its forms system.
+In this section we'll use one of the most powerful Django beasts - its [forms system](https://docs.djangoproject.com/en/3.2/topics/forms/)!
 
-For the start, edit the base account page template once more and add the the following link just before the transactions table:
+For the start, edit the base account page template once again and add the the following link just before the transactions table:
 
 `mainapp\templates\mainapp\base_account.html`
 
@@ -850,6 +854,128 @@ urlpatterns = [
 ]
 ```
 
+Now create a brand new module `forms.py` in the main application directory and add the following code into it:
+
+`mainapp/forms.py`
+
+```python
+from algosdk.constants import address_len, mnemonic_len, note_max_length
+from django import forms
+from django.core.exceptions import ValidationError
+from django.forms.fields import CharField
+
+
+class TransferFundsForm(forms.Form):
+    """Django form for transferring microAlgos between accounts."""
+
+    passphrase = forms.CharField()
+    receiver = forms.CharField(max_length=address_len)
+    amount = forms.IntegerField(min_value=1)
+    note = forms.CharField(max_length=note_max_length, required=False)
+
+    def clean_passphrase(self):
+        """Example validation for the passphrase field."""
+        data = self.cleaned_data["passphrase"]
+        words = data.split(" ")
+        if len(words) != mnemonic_len:
+            raise ValidationError(
+                "Passphrase must have exactly %s words!" % (mnemonic_len,)
+            )
+        return data
+
+    def clean_receiver(self):
+        """Example validation for the receiver field."""
+        data = self.cleaned_data["receiver"]
+        if len(data) != address_len:
+            raise ValidationError(
+                "Algorand's address must be %s characters long!" % (address_len,)
+            )
+        return data
+```
+
+When a validation error is raised during the form submission process inside Django framework, then the form is returned with either the field error(s) or with a non-field error. Django forms system can take care of some predefined requirements on the client side (like the receiver or note field length in this form) before validation takes place on the server side. In this form we validate two fields, `passphrase` and `receiver`, for some simple requirements.
+
+The template responsible for rendering this form looks like this:
+
+`mainapp/templates/mainapp/transfer_funds.html`
+
+```html
+{% extends 'mainapp/base.html' %}
+{% block title %}Transfer funds{% endblock %}
+{% block body %}
+  <h1>Transfer funds</h1>
+  <p><strong>Sender</strong>: {{ sender }}</p>
+  <form action="/transfer-funds/{{ sender }}/" method="post">
+    {% csrf_token %}
+    <table>{{ form.as_table }}</table>
+    <input type="submit" value="Submit">
+  </form>
+{% endblock %}
+```
+
+As you can see, we instruct the Django template system to display the form as a table and Django takes care of rendering it properly. Also, every Django form needs the [Cross Site Request Forgery protection token tag](https://docs.djangoproject.com/en/3.2/ref/csrf/) for the security reasons.
+
+In order to display the form errors text in red, update the CSS with:
+
+`mainapp/static/mainapp/style.css`
+
+```css
+ul.errorlist li {
+    color: red;
+}
+```
+
+Now add the following to the main application views module:
+
+`mainapp/views.py`
+
+```python
+from .forms import TransferFundsForm
+
+
+def transfer_funds(request, sender):
+    """Transfer funds from the provided sender account to the receiver from the form."""
+    if request.method == "POST":
+
+        form = TransferFundsForm(request.POST)
+
+        if form.is_valid():
+
+            error_field, error_description = add_transaction(
+                sender,
+                form.cleaned_data["receiver"],
+                form.cleaned_data["passphrase"],
+                form.cleaned_data["amount"],
+                form.cleaned_data["note"],
+            )
+            if error_field == "":
+                message = "Amount of {} microAlgos has been successfully transferred to account {}".format(
+                    form.cleaned_data["amount"], form.cleaned_data["receiver"]
+                )
+                messages.add_message(request, messages.SUCCESS, message)
+                return redirect("standalone-account", sender)
+
+            form.add_error(error_field, error_description)
+
+    else:
+        form = TransferFundsForm()
+
+    context = {"form": form, "sender": sender}
+
+    return render(request, "mainapp/transfer_funds.html", context)
+```
+
+This code uses the same template for the GET and the failed POST requests. For the GET it instantiates an empty form, while for the POST the form is instantiated with the user's data together with the errors and then it is forwarded to the same template as a context variable.
+
+![Server side error](https://github.com/ipaleka/algodjango/blob/main/media/form-server-side-error.png?raw=true)
+
+In the case of successfully validated form, the entered data is sent to the helper function where Algorand SDK tries to create a transaction. That is the second step in validation process and if Algorand SDK can't create a transaction from the provided data then we manually add the supplied error to the form and it is forwarded to the same template.
+
+![SDK error](https://github.com/ipaleka/algodjango/blob/main/media/sdk-form-error.png?raw=true)
+
+If Algorand SDK successfully manages to create a transaction, then a success message is created and request redirects to the starting account's page. Refresh the page after few seconds and both account's transactions should be displayed:
+
+![Standalone account transactions](https://github.com/ipaleka/algodjango/blob/main/media/standalone-account-transactions.png?raw=true)
 
 
 
