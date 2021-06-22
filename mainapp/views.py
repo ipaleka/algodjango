@@ -1,6 +1,12 @@
 from django.contrib import messages
 from django.shortcuts import redirect, render
 
+from .forms import (
+    CreateAssetForm,
+    CreateWalletForm,
+    SearchTransactionsForm,
+    TransferFundsForm,
+)
 from .helpers import (
     INITIAL_FUNDS,
     add_asset,
@@ -11,13 +17,6 @@ from .helpers import (
     get_wallet,
     initial_funds_sender,
     search_transactions,
-)
-
-from .forms import (
-    CreateAssetForm,
-    CreateWalletForm,
-    SearchTransactionsForm,
-    TransferFundsForm,
 )
 from .models import Account, Asset, Wallet, WalletAccount
 
@@ -215,6 +214,6 @@ def wallet_account(request, wallet_id, address):
 
 def wallets(request):
     """Display all the created wallets."""
-    wallets = Wallet.objects.order_by("-created")
+    wallets = Wallet.objects.order_by("name")
     context = {"wallets": wallets}
     return render(request, "mainapp/wallets.html", context)

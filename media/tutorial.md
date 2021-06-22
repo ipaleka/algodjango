@@ -389,12 +389,9 @@ Run the development server now (`python manage.py runserver`) and point your bro
 Congratulations on your first Django page!
 
 
-# Getting started with Algorand SDK
+# Standalone account creation
 
 All the sections and code from previous sections can be used for the general purpose of creating web pages with Django. That introduction steps were needed to get you familiarized with the basic Django principles and now we're finally ready to start using Algorand SDK!
-
-
-## Standalone account creation
 
 We created a link in the index page to the page used for creation of a standalone account. Now, update app's `urls.py` and `views.py` modules with the related code.
 
@@ -420,6 +417,8 @@ def create_standalone(request):
     context = {"account": (address, passphrase)}
     return render(request, "mainapp/create_standalone.html", context)
 ```
+
+A new account record in the database is created by calling the `create` method on the Account's model `objects` manager. All the required model fields values should be provided to the create method in order to successfully create an object - in our case that would be the account's address.
 
 As you can see, we introduced a new module named `helpers.py`. That module will hold all the Algorand functionality code of our project. Create that module in the mainapp directory with the following content:
 
@@ -465,7 +464,7 @@ Go to the index page, click the link entitled `Create standalone account` and yo
 ![Create standalone account](https://github.com/ipaleka/algodjango/blob/main/media/create-standalone-page.png?raw=true)
 
 
-## Initial funds for the standalone accounts
+# Initial funds for the standalone accounts
 
 Algorand Sandbox operates either in a real network mode (using one of the Algorand's [public networks](https://developer.algorand.org/docs/reference/algorand-networks/)) or in a private network mode. In the former case, you may use the Testnet and add funds to your account in the [Algorand dispenser](https://bank.testnet.algorand.network/), but in this tutorial we use the private network mode which has been the default setup for the Sandbox. Algorand Sandbox creates some test accounts filled with Algos and we'll use one of those accounts to transfer initial funds to the accounts created by our application.
 
@@ -669,7 +668,8 @@ def account_balance(address):
     return account_info.get("amount")
 ```
 
-## Create and sign a transaction on the Algorand blockchain
+
+# Create and sign a transaction on the Algorand blockchain
 
 [Algorand](https://developer.algorand.org/docs/reference/transactions/) and [Python Algorand SDK](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/transaction.html) allow you to change various arguments in the transactions creating process according to your needs, We'll be using the suggested parameters by Algorand SDK for the purpose of this tutorial.
 
@@ -739,7 +739,7 @@ def _wait_for_confirmation(client, transaction_id, timeout):
 And now you're ready to transfer the initial funds to your account. Point your browser to the index page, create a standalone account, click the `Add initial funds` link, wait no more than 5 seconds for the transaction confirmation on the blockchain and - voilà! - you've got your Algos!
 
 
-## Display account's transactions
+# Display account's transactions
 
 The account page should display a list of all created transactions. Edit the account model and add the following method:
 
@@ -831,7 +831,7 @@ th {
 From now on, every account's transaction will be displayed as a table row at the end of the account page.
 
 
-## Transfer funds functionality
+# Transfer funds functionality
 
 In this section we'll use one of the most powerful Django beasts - its [forms system](https://docs.djangoproject.com/en/3.2/topics/forms/)!
 
@@ -978,8 +978,300 @@ If Algorand SDK successfully manages to create a transaction, then a success mes
 ![Standalone account transactions](https://github.com/ipaleka/algodjango/blob/main/media/standalone-account-transactions.png?raw=true)
 
 
+# Wallets creation
+
+We created Algorand's standalone accounts in the previous sections that aren't connected to any wallet. Now we're going to create both the wallets and the accounts connected to them.
+
+Update the app's URL configuration with all the URL we+re going to manage in this section:
+
+`mainapp/urls.py`
+
+```python
+urlpatterns = [
+    #
+    path("wallets/", views.wallets, name="wallets"),
+    path("create-wallet/", views.create_wallet, name="create-wallet"),
+    path("wallet/<str:wallet_id>/", views.wallet, name="wallet"),
+    path(
+        "create-wallet-account/<str:wallet_id>/",
+        views.create_wallet_account,
+        name="create-wallet-account",
+    ),
+    path(
+        "wallet-account/<str:wallet_id>/<str:address>/",
+        views.wallet_account,
+        name="wallet-account",
+    ),
+]
+```
+
+Our navigation bar located in the base template gets another item:
+
+`mainapp\templates\mainapp\base.html`
+
+```html
+    <div class="topnav">
+      <a href="/"{% if request.path == '/' %} class="active"{% endif %}>Standalone accounts</a>
+      <a href="/wallets/"{% if request.path == '/wallets/' %} class="active"{% endif %}>Wallets</a>
+    </div>
+```
+
+The wallets list page is similar to our index page where all the standalone accounts are displayed:
+
+`mainapp\templates\mainapp\wallets.html`
+
+```html
+{% extends 'mainapp/base.html' %}
+{% block title %}Wallets{% endblock %}
+{% block body %}
+  <h1>Wallets list</h1>
+  {% if wallets %}
+  <ul>
+  {% for wallet in wallets %}
+    <li><a href="/wallet/{{ wallet.wallet_id }}">{{ wallet.name }}</a></li>
+  {% endfor %}
+  </ul>
+  {% else %}
+  <p>There are no wallets.</p>
+  {% endif %}
+  <br>
+  <a href="/create-wallet/">Create wallet</a>
+{% endblock %}
+```
+
+![Wallets page](https://github.com/ipaleka/algodjango/blob/main/media/wallets-page.png?raw=true)
 
 
-**after creating the wallets accounts change the index 
+The page used for creating a new wallet should look familiar too:
+
+`mainapp\templates\mainapp\create_wallet.html`
+
+```html
+{% extends 'mainapp/base.html' %}
+{% block title %}Create wallet{% endblock %}
+{% block body %}
+  <h1>Create wallet</h1>
+  <form action="/create-wallet/" method="post">
+    {% csrf_token %}
+    <table>{{ form.as_table }}</table>
+    <input type="submit" value="Submit">
+  </form>
+{% endblock %}
+```
+
+A user defines the name and password of the wallet, while Algorand SDK creates its ID. Those are the wallet properties that we record in our database:
+
+`mainapp\models.html`
+
+```python
+
+class Wallet(models.Model):
+    """Model class for wallets."""
+
+    wallet_id = models.CharField(max_length=hash_len)
+    name = models.CharField(max_length=50)
+    password = models.CharField(max_length=50)
+    created = models.DateTimeField(auto_now_add=True)
+
+    @classmethod
+    def instance_from_id(cls, wallet_id):
+        """Return model instance from provided wallet's ID."""
+        try:
+            return cls.objects.get(wallet_id=wallet_id)
+        except ObjectDoesNotExist:
+            raise Http404
+```
+
+To retrieve a wallet object from the wallet ID string we use the class method `instance_from_id`. So, a call `Wallet.instance_from_id(id_string)` will either return the wallet instance or will raise the error if there's no wallet with provided `id_string` as its ID.
+
+For the purpose of this tutorial and validation example, we define that a password can't consist just of numbers or just of letters:
+
+`mainapp\forms.html`
+
+```python
+class CreateWalletForm(forms.Form):
+    """Django form for creating wallets."""
+
+    name = forms.CharField(min_length=2)
+    password = forms.CharField(min_length=2)
+
+    def clean_password(self):
+        """Example validation for the password field."""
+        data = self.cleaned_data["password"]
+        if data.isnumeric():
+            raise ValidationError("Alphanumeric value for password is required!")
+        if data.isalpha():
+            raise ValidationError("Alphanumeric value for password is required!")
+
+        return data
+```
+
+The most interesting thing in this section is the object-oriented capability of Django models that we're going to use for the account connected to wallets:
+
+`mainapp\models.html`
+
+```python
+class WalletAccount(Account):
+    """Model class for accounts belonging to wallets."""
+
+    wallet = models.ForeignKey(Wallet, default=None, on_delete=models.CASCADE)
+```
+
+Our model is inherited from the old Account model and we just add a foreign key to the wallet it belongs to. We also use the Django template system to avoid redundancy:
+
+`mainapp/templates/mainapp/wallet_account.html`
+
+```html
+{% extends 'mainapp/base_account.html' %}
+{% block prefix %}Wallet{% endblock prefix %}
+{% block start %}<p>Wallet: {{ wallet.name }} (ID: {{ wallet.wallet_id }})</p>{% endblock start %}
+```
+
+The page for displaying a wallet has a familiar structure:
+
+`mainapp/templates/mainapp/wallet.html`
+
+```html
+{% extends 'mainapp/base.html' %}
+{% block title %}Wallet page{% endblock %}
+{% block body %}
+  <h1>Wallet page</h1>
+  <p>Name: {{ wallet.name }}</p>
+  <p>ID: {{ wallet.wallet_id }}</p>
+  <p>Created: {{ wallet.created }}</p>
+
+  {% if messages %}
+    <ul class="messages">
+      {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+
+  <h2>Wallet accounts</h2>
+  {% for account in wallet.walletaccount_set.all %}
+    <li><a href="/wallet-account/{{ wallet.wallet_id }}/{{ account.address }}">{{ account.address }}</a> : {{ account.balance }} microAlgos</li>
+  {% endfor %}
+  <br>
+  <a href="/create-wallet-account/{{ wallet.wallet_id }}/">Create wallet account</a>
+
+{% endblock %}
+```
+
+The views and related code involved in the wallet creating and displaying processes follow the practice already presented in this tutorial:
+
+`mainapp/views.py`
+
+```python
+from .forms import CreateWalletForm
+from .helpers import add_wallet, get_wallet
+
+
+def create_wallet(request):
+    """Create wallet from the form data."""
+    if request.method == "POST":
+
+        form = CreateWalletForm(request.POST)
+
+        if form.is_valid():
+
+            wallet_id = add_wallet(
+                form.cleaned_data["name"], form.cleaned_data["password"]
+            )
+            if wallet_id != "":
+                Wallet.objects.create(
+                    wallet_id=wallet_id,
+                    name=form.cleaned_data["name"],
+                    password=form.cleaned_data["password"],
+                )
+                message = "Wallet with name '{}' and ID '{}' has been created.".format(
+                    form.cleaned_data["name"], wallet_id
+                )
+                messages.add_message(request, messages.SUCCESS, message)
+                return redirect("wallet", wallet_id)
+
+            form.add_error(None, "Wallet is not created!")
+
+    else:
+        form = CreateWalletForm()
+
+    context = {"form": form}
+
+    return render(request, "mainapp/create_wallet.html", context)
+
+
+def create_wallet_account(request, wallet_id):
+    """Create account in the wallet with provided ID."""
+    model = Wallet.instance_from_id(wallet_id)
+    wallet = get_wallet(model.name, model.password)
+    address = wallet.generate_key()
+    WalletAccount.objects.create(wallet=model, address=address)
+    message = "Address '{}' has been created in the wallet.".format(address)
+    messages.add_message(request, messages.SUCCESS, message)
+    return redirect("wallet", wallet_id)
+
+
+def wallet(request, wallet_id):
+    """Display information of the wallet with provided ID."""
+    context = {"wallet": Wallet.instance_from_id(wallet_id)}
+    return render(request, "mainapp/wallet.html", context)
+
+
+def wallet_account(request, wallet_id, address):
+    """Display information of the wallet account with provided address."""
+    context = {
+        "wallet": Wallet.instance_from_id(wallet_id),
+        "account": Account.instance_from_address(address),
+    }
+    return render(request, "mainapp/wallet_account.html", context)
+
+
+def wallets(request):
+    """Display all the created wallets."""
+    wallets = Wallet.objects.order_by("name")
+    context = {"wallets": wallets}
+    return render(request, "mainapp/wallets.html", context)
+```
+
+We use the [Key Management Daemon client](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/kmd.html#algosdk.kmd.KMDClient) for the purpose of creating and retrieving the wallets from the Algorand blockchain:
+
+`mainapp/helpers.py`
+
+```python
+from algosdk import kmd
+from algosdk.wallet import Wallet
+
+
+def _kmd_client():
+    """Instantiate and return kmd client object."""
+    kmd_address = "http://localhost:4002"
+    kmd_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    return kmd.KMDClient(kmd_token, kmd_address)
+
+def add_wallet(name, password):
+    """Create wallet and return its ID."""
+    try:
+        wallet = Wallet(name, password, _kmd_client())
+    except:
+        return ""
+    return wallet.id
+
+def get_wallet(name, password):
+    """Return wallet object from provided arguments."""
+    return Wallet(name, password, _kmd_client())
+```
+
+A wallet object is returned if a user instantiates the [Wallet class](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/wallet.html#algosdk.wallet.Wallet) with a wallet name and a password. If such wallet doesn't exist then Algorand SDK simply creates it with that name and password.
+
+Let's do one more thing before we move to the next section. If we now visit project's root/index page then both the standalone and wallet-based accounts will show up. Update the index view and use the Django object relational mapper to exclude the wallet-based accounts:
+
+`mainapp/views.py`
+
+```python
+def index(request):
+    #
     accounts = Account.objects.exclude(walletaccount__isnull=False).order_by("-created")
+```
 
+
+# Assets creation
