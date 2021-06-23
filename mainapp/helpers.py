@@ -238,7 +238,7 @@ def search_transactions(data):
     transactions = (
         _indexer_client().search_transactions(**criteria).get("transactions", [])
     )
-    # Decode notes before returning the list
+    # Decode notes to human-readable strings before returning the list
     for tr in transactions:
         tr["note"] = base64.b64decode(tr.get("note", "")).decode("utf-8")
     return transactions

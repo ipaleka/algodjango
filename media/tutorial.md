@@ -2,14 +2,12 @@
 
 The purpose of this tutorial is to introduce the reader to the [Algorand SDK](https://developer.algorand.org/docs/reference/sdks/) and its implementation in the [Django framework](https://www.djangoproject.com/).
 
-
-
-**xyz**
+All the source code for this tutorial is available in a [public GitHub repository](https://github.com/ipaleka/algodjango).
 
 
 # Requirements
 
-This tutorial uses a [Python](https://www.python.org/) wrapper around Algorand SDK, so you should have Python 3 installed on your system. Also, this tutorial uses `python3-venv` package for creating virtual environments and you have to install it if it's not already installed in your system. For a Debian/Ubuntu based systems, you can do that by issuing the following command:
+This tutorial uses a [Python](https://www.python.org/) wrapper around [Algorand SDK](https://developer.algorand.org/docs/reference/sdks/), so you should have Python 3 installed on your system. Also, this tutorial uses `python3-venv` package for creating virtual environments and you have to install it if it's not already installed in your system. For a Debian/Ubuntu based systems, you can do that by issuing the following command:
 
 ```bash
 $ sudo apt-get install python3-venv
@@ -83,6 +81,9 @@ We're ready now to install our project's main dependencies: the [Python Algorand
 ```bash
 (algovenv) $ pip install py-algorand-sdk Django
 ```
+
+Version 1.5.0 of Python Algorand SDK and Django LTS version 3.2 are going to be installed by issuing that command at the time of writing this tutorial.
+
 
 # Create Django project and the main application
 
@@ -177,7 +178,7 @@ If all goes well then you're ready to start writing code for your Algorand appli
 
 # Our first Django page
 
-In the next few sections, we're going to configure and create code for our project's first Django-based HTML page.
+In the next few sections, we're going to configure and create code for our first Django-based HTML page.
 
 
 ## Application's URL configuration
@@ -761,6 +762,9 @@ The code that will return the list of provided [account's transactions](https://
 `mainapp\helpers.py`
 
 ```python
+import base64
+
+
 def account_transactions(address):
     """Return all transactions involving provided address."""
     transactions = (
@@ -2207,3 +2211,149 @@ def add_asset(data):
 
 
 # Search transactions
+
+In the last section of this tutorial, we're going to create a basic form that uses the Algorand SDK [indexer client](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/v2client/indexer.html) to perform searching for the transactions on the blockchain.
+
+For the start, update the navigation bar in the base template with the fourth item:
+
+`mainapp\templates\mainapp\base.html`
+
+```html
+    <div class="topnav">
+      <a href="/"{% if request.path == '/' %} class="active"{% endif %}>Standalone accounts</a>
+      <a href="/wallets/"{% if request.path == '/wallets/' %} class="active"{% endif %}>Wallets</a>
+      <a href="/assets/"{% if request.path == '/assets/' %} class="active"{% endif %}>Assets</a>
+      <a href="/search/"{% if request.path == '/search/' %} class="active"{% endif %}>Search transactions</a>
+    </div>
+```
+
+The template renders a form the way we've already used in this tutorial, but this time the same template uses `transactions` context variable to display the found transactions:
+
+`mainapp\templates\mainapp\base.html`
+
+```html
+{% extends 'mainapp/base.html' %}
+{% block title %}Search transactions{% endblock %}
+{% block body %}
+  <h1>Search transactions</h1>
+  <form action="/search/" method="post">
+    {% csrf_token %}
+    <table>{{ form.as_table }}</table>
+    <input type="submit" value="Submit">
+  </form>
+  <br>
+  {% for transaction in transactions %}
+    {{ transaction }}
+    <br><br>
+  {% endfor %}
+{% endblock %}
+```
+
+You should add one more entry in the main application's URL configuration module:
+
+`mainapp/urls.py`
+
+```python
+urlpatterns = [
+    #
+    path("search/", views.search, name="search"),
+]
+```
+
+The form used to accept users data brings some new elements we haven't yet used in this tutorial:
+
+`mainapp/forms.py`
+
+```python
+class SearchTransactionsForm(forms.Form):
+    """Django form for searching Algorand transactions."""
+
+    note_prefix = forms.CharField(required=False)
+    address = forms.CharField(required=False)
+    asset_id = forms.CharField(required=False, label="Asset ID")
+    txid = forms.CharField(required=False, label="Transaction ID")
+    block = forms.CharField(required=False, label="Round")
+    txn_type = forms.ChoiceField(
+        required=False,
+        choices=[
+            ("", "All types"),
+            ("pay", "Payment"),
+            ("keyreg", "Key registration"),
+            ("acfg", "Asset configuration"),
+            ("axfer", "Asset freeze"),
+            ("afrz", "Asset transfer"),
+        ],
+        label="Transaction type",
+    )
+
+    def clean_note_prefix(self):
+        """Algorand SDK needs bytes-like object for note prefix."""
+        data = self.cleaned_data["note_prefix"]
+        return data.encode("ascii") if data != "" else data
+
+    def clean(self):
+        """Ensure at least one field is non-empty."""
+        cleaned_data = super().clean()
+        if all(val == "" for val in cleaned_data.values()):
+            raise ValidationError("You must fill at least one field!")
+
+        return cleaned_data
+```
+
+As you're going to see in the helper function connected to the search capability, we need the exact field names like in Algorand SDK for the search functionality of the application. As those field names aren't always human-comprehensible, we added the *label* named argument for those fields that replace the generic label created from the field name.
+
+Another new element is the use of choices for the `txn_type` field - we limit the input to a list of pre-defined types to reduce the possibility of error.
+
+And finally, we introduce the non-field/form level of validation with the `clean` method. The validation error raises for a condition created not from just one field, but rather from multiple fields (or from all of them in this case).
+
+`mainapp/views.py`
+
+```python
+from .forms import SearchTransactionsForm
+from .helpers import search_transactions
+
+
+def search(request):
+    """Search transactions based on criteria created from the form data."""
+    transactions = []
+    if request.method == "POST":
+
+        form = SearchTransactionsForm(request.POST)
+
+        if form.is_valid():
+
+            transactions = search_transactions(form.cleaned_data)
+
+    else:
+        form = SearchTransactionsForm()
+
+    context = {"form": form, "transactions": transactions}
+
+    return render(request, "mainapp/search.html", context)
+```
+
+The view that renders our looks familiar. As you can see, we pass the empty list as the template context in the case of a GET request or an invalid POST request. The same happens when Algorand SDK can't find any result based on our search criteria.
+
+`mainapp/helpers.py`
+
+```python
+def search_transactions(data):
+    """Search transaction based on criteria from provided data."""
+    criteria = {key: val for key, val in data.items() if val != ""}
+    transactions = (
+        _indexer_client().search_transactions(**criteria).get("transactions", [])
+    )
+    # Decode notes to human-readable strings before returning the list
+    for tr in transactions:
+        tr["note"] = base64.b64decode(tr.get("note", "")).decode("utf-8")
+    return transactions
+```
+
+The Algorand's Indexer [search_transactions](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/v2client/indexer.html#algosdk.v2client.indexer.IndexerClient.search_transactions) method accepts various named arguments used to search on the blockchain. We use that fact to create non-empty pairs from our form field names and corresponding values.
+
+![Search transactions](https://github.com/ipaleka/algodjango/blob/main/media/search-transactions.png?raw=true)
+
+
+# Conclusion
+
+We introduced the reader to some basic concepts of Python Algorand SDK and the Django framework. Use the presented material and [publicly available code](https://github.com/ipaleka/algodjango) to start working on your own projects based on the Algorand blockchain.
