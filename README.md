@@ -1,4 +1,4 @@
-# algodjango
+![algodjango](https://github.com/ipaleka/algodjango/blob/main/media/algodjango.png?raw=true)
 
 Django project presenting some Algorand's blockchain processes with the help of `py-algorand-sdk` package.
 
@@ -9,8 +9,7 @@ This project has not been audited and should not be used in a production environ
 
 ---
 
-
-## Requirements
+# Requirements
 
 You should have Python 3 installed on your system. Also, this tutorial uses `python3-venv` for creating virtual environments - install it in a Debian/Ubuntu based systems by issuing the following command:
 
@@ -36,7 +35,7 @@ export SANDBOX_DIR="/home/ipaleka/dev/algorand/sandbox
 If you want to clone the repositories, not just download them, then you should have Git installed on your computer.
 
 
-## Setup
+# Setup
 
 At first create the root directory:
 
@@ -84,7 +83,7 @@ Point your browser to http://127.0.0.1:8000/ and you should see the starting pag
 ![algodjango starting page](https://github.com/ipaleka/algodjango/blob/main/media/starting-page.png?raw=true)
 
 
-## Troubleshooting
+# Troubleshooting
 
 If you want a fresh start, issue the following for the Sandbox:
 
