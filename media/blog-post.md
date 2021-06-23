@@ -3,14 +3,14 @@
 
 # Introduction
 
-The purpose of this tutorial is to introduce the reader to the [Algorand SDK](https://developer.algorand.org/docs/reference/sdks/) and its implementation in the [Django framework](https://www.djangoproject.com/).
+The purpose of this blog post is to introduce the reader to the [Algorand SDK](https://developer.algorand.org/docs/reference/sdks/) and its implementation in the [Django framework](https://www.djangoproject.com/).
 
-All the source code for this tutorial is available in a [public GitHub repository](https://github.com/ipaleka/algodjango).
+All the source code for this blog is available in a [public GitHub repository](https://github.com/ipaleka/algodjango).
 
 
 # Requirements
 
-This tutorial uses a [Python](https://www.python.org/) wrapper around [Algorand SDK](https://developer.algorand.org/docs/reference/sdks/), so you should have Python 3 installed on your system. Also, this tutorial uses `python3-venv` package for creating virtual environments and you have to install it if it's not already installed in your system. For a Debian/Ubuntu based systems, you can do that by issuing the following command:
+This project uses a [Python](https://www.python.org/) wrapper around [Algorand SDK](https://developer.algorand.org/docs/reference/sdks/), so you should have Python 3 installed on your system. Also, this project uses `python3-venv` package for creating virtual environments and you have to install it if it's not already installed in your system. For a Debian/Ubuntu based systems, you can do that by issuing the following command:
 
 ```bash
 $ sudo apt-get install python3-venv
@@ -41,12 +41,12 @@ Start the Sandbox Docker containers by issuing the following command:
 ./sandbox/sandbox up
 ```
 
-For the rest of this tutorial, we'll assume that Sandbox is up and running in your system.
+For the rest of this post, we'll assume that Sandbox is up and running in your system.
 
 ---
 **Note**
 
-This tutorial code implies that the Sandbox executable is in the `sandbox` directory which is a sibling to this project's directory:
+This project code implies that the Sandbox executable is in the `sandbox` directory which is a sibling to this project's directory:
 
 ```bash
 $ tree -L 1
@@ -85,7 +85,7 @@ We're ready now to install our project's main dependencies: the [Python Algorand
 (algovenv) $ pip install py-algorand-sdk Django
 ```
 
-Version 1.5.0 of Python Algorand SDK and Django LTS version 3.2 are going to be installed by issuing that command at the time of writing this tutorial.
+Version 1.5.0 of Python Algorand SDK and Django LTS version 3.2 are going to be installed by issuing that command at the time of writing this blog post.
 
 
 # Create Django project and the main application
@@ -216,16 +216,16 @@ urlpatterns = [
 
 ## Root page view
 
-Now every request in your browser to the root page of the site (an empty string as URL defines the root page of the site - in the case of our development server that would be http://127.0.0.1:8000/) will execute code from the `index` function found inside `mainapp/views.py` module.
+An empty string as a URL defines the root page of the site - in the case of our development server that would be http://127.0.0.1:8000/. From now on, every request in your browser to the root page of the site will execute code from the `index` function found inside `mainapp/views.py` module.
 
 ---
 **Note**
 
-You may implement Django views in two different ways: as function based views or as class-based views. Please take some time to familiarize yourself with the class-based views in Django because they can make your coding more powerful and more secure, but for the purpose of technology introduction to the readers, like in this tutorial, the function-based views are probably easier to grasp on and so are the better choice.
+You may implement Django views in two different ways: as function based views or as class-based views. Please take some time to familiarize yourself with the class-based views in Django because they can make your coding more powerful and more secure, but for the purpose of technology introduction to the readers, like in this blog post, the function-based views are probably easier to grasp on and so are the better choice.
 
 ---
 
-Our root/index page will be used to display the list of all created [standalone accounts](https://developer.algorand.org/docs/features/accounts/) in our application. Besides those standalone accounts, we'll be creating and displaying accounts connected to the wallets in our app. There are other types of accounts that are entities in the Algorand blockchain, like special or multi-signature accounts, but those are out of scope for this tutorial.
+Our root/index page will be used to display the list of all created [standalone accounts](https://developer.algorand.org/docs/features/accounts/) in our application. Besides those standalone accounts, we'll be creating and displaying accounts connected to the wallets in our app. There are other types of accounts that are entities in the Algorand blockchain, like special or multi-signature accounts, but those are out of scope for this project.
 
 Update the `views.py` module with the code as follows:
 
@@ -243,7 +243,7 @@ def index(request):
     return render(request, "mainapp/index.html", context)
 ```
 
-So, we fetch all the account objects from the database (we'll get to that code related to the database in a minute) and we pass them in the form of a Python dictionary as the context of the index page template (another code yet to be created) rendered by Django framework.
+So, we fetch all the account objects from the database (we'll get to that code related to the database in a minute) and we pass them in the form of a Python dictionary as the context of the index page template rendered by Django framework (another code yet to be created).
 
 ---
 **Note**
@@ -254,7 +254,7 @@ We may use the Algorand SDK for the same purpose of fetching created accounts, b
 
 ## Account model
 
-[Django model](https://docs.djangoproject.com/en/3.2/topics/db/models/) is a class that represents a table in your database. The default database engine of a newly created Django project is SQLite and we're going to use it in this tutorial. That engine creates a single file in the project's root directory named `db.sqlite3` which represents our database.
+[Django model](https://docs.djangoproject.com/en/3.2/topics/db/models/) is a class that represents a table in your database. The default database engine of a newly created Django project is SQLite and we're going to use it in this project. That engine creates a single file in the project's root directory named `db.sqlite3` which represents our database.
 
 For the account model, we record only the account addresses and the time when they are created. The rest of the account information isn't kept in our database, and remembering the account passphrase is up to the user.
 
@@ -334,14 +334,14 @@ Now create the following two files in that directory:
 {% endblock %}
 ```
 
-We're going to use this `base.html` in all of our templates in this tutorial. In short, based on the [DRY principle](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) and with the help of the [Django template system](https://docs.djangoproject.com/en/3.2/topics/templates/), our templates will share the same HTML page headers and the navigation bar. As you might have already guessed from these templates, we *extend* the base template and change the defined *blocks* of data in the derived templates.
+We're going to use this `base.html` in all of our templates in this project. In short, based on the [DRY principle](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) and with the help of the [Django template system](https://docs.djangoproject.com/en/3.2/topics/templates/), our templates will share the same HTML page headers and the navigation bar. As you might have already guessed from these templates, we *extend* the base template and change the defined *blocks* of data in the derived templates.
 
 In the index template, we loop through the context's `accounts` - the value we provided to the template in our index view. For each account, we create an unordered list item with a link to that account's detail page (a template we haven't created yet).
 
 
 ## CSS styling
 
-We need to do one more thing before we point our browser to the index page - improve the aesthetic of our pages! This part is optional and it won't change the tutorial's functionality, but maybe it will help you in configuring your future Django-based Algorand's projects.
+We need to do one more thing before we point our browser to the index page - improve the aesthetic of our pages! This part is optional and it won't change the project's functionality, but maybe it will help you in configuring your future Django-based Algorand's projects.
 
 As you can see from the `base.html` template, the CSS for our site is located in the `style.css` file. The default placement for the [static files](https://docs.djangoproject.com/en/3.2/howto/static-files/) in Django projects is similar to templates:
 
@@ -470,7 +470,7 @@ Go to the index page, click the link entitled `Create standalone account` and yo
 
 # Initial funds for the standalone accounts
 
-Algorand Sandbox operates either in a real network mode (using one of the Algorand's [public networks](https://developer.algorand.org/docs/reference/algorand-networks/)) or in a private network mode. In the former case, you may use the Testnet and add funds to your account in the [Algorand dispenser](https://bank.testnet.algorand.network/), but we use the private network mode in this tutorial which has been the default setup for the Sandbox. Algorand Sandbox creates some test accounts filled with Algos and we'll use one of those accounts to transfer initial funds to the accounts created by our application.
+Algorand Sandbox operates either in a real network mode (using one of the Algorand's [public networks](https://developer.algorand.org/docs/reference/algorand-networks/)) or in a private network mode. In the former case, you may use the Testnet and add funds to your account in the [Algorand dispenser](https://bank.testnet.algorand.network/), but we use the private network mode in this project which has been the default setup for the Sandbox. Algorand Sandbox creates some test accounts filled with Algos and we'll use one of those accounts to transfer initial funds to the accounts created by our application.
 
 The following code in `helpers.py` module is responsible for retrieving the address of a test account (created by Sandbox) that has enough funds (funds to transfer plus the minimum requirement of 0.1 Algo) which can be transferred to our accounts:
 
@@ -675,7 +675,7 @@ def account_balance(address):
 
 # Create and sign a transaction on the Algorand blockchain
 
-[Algorand](https://developer.algorand.org/docs/reference/transactions/) and [Python Algorand SDK](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/transaction.html) allow you to change various arguments in the transactions creating process according to your needs, We'll be using the suggested parameters by Algorand SDK for the purpose of this tutorial.
+[Algorand](https://developer.algorand.org/docs/reference/transactions/) and [Python Algorand SDK](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/transaction.html) allow you to change various arguments in the transactions creating process according to your needs, We'll be using the suggested parameters by Algorand SDK for the purpose of this project.
 
 `mainapp\helpers.py`
 
@@ -1093,7 +1093,7 @@ class Wallet(models.Model):
 
 To retrieve a wallet object from the wallet ID string we use the class method `instance_from_id`. So, a call `Wallet.instance_from_id(id_string)` will either return the wallet instance or will raise the error if there's no wallet with provided `id_string` as its ID.
 
-For the purpose of this tutorial and validation example, we define that a password can't consist just of numbers or just of letters:
+For the purpose of this introduction project and validation example, we define that a password can't consist just of numbers or just of letters:
 
 `mainapp\forms.html`
 
@@ -1167,7 +1167,7 @@ The page for displaying a wallet has a familiar structure:
 {% endblock %}
 ```
 
-The views and related code involved in the wallet creating and displaying processes follow the practice already presented in this tutorial:
+The views and related code involved in the wallet creating and displaying processes follow the practice already presented in this blog post:
 
 `mainapp/views.py`
 
@@ -1274,8 +1274,7 @@ A wallet object is returned if a user instantiates the [Wallet class](https://py
 
 Let's do one more thing before we move to the next section. If we now visit project's root/index page then both the standalone and wallet-based accounts will show up. Update the index view and use the Django object relational mapper to exclude the wallet-based accounts:
 
-`mainapp/views.py`
-We use the base template as we're going to code the wallet-based accounts functionality in this tutorial that will use the same base template:
+We use the base template as we're going to code the wallet-based accounts functionality in this project that will use the same base template:
 
 `mainapp\templates\mainapp\base_account.html`
 
@@ -1353,7 +1352,7 @@ def account_balance(address):
 
 # Create and sign a transaction on the Algorand blockchain
 
-[Algorand](https://developer.algorand.org/docs/reference/transactions/) and [Python Algorand SDK](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/transaction.html) allow you to change various arguments in the transactions creating process according to your needs, We'll be using the suggested parameters by Algorand SDK for the purpose of this tutorial.
+[Algorand](https://developer.algorand.org/docs/reference/transactions/) and [Python Algorand SDK](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/transaction.html) allow you to change various arguments in the transactions creating process according to your needs, We'll be using the suggested parameters by Algorand SDK for the purpose of this technology introduction project.
 
 `mainapp\helpers.py`
 
@@ -1766,7 +1765,7 @@ class Wallet(models.Model):
 
 To retrieve a wallet object from the wallet ID string we use the class method `instance_from_id`. So, a call `Wallet.instance_from_id(id_string)` will either return the wallet instance or will raise the error if there's no wallet with provided `id_string` as its ID.
 
-For the purpose of this tutorial and validation example, we define that a password can't consist just of numbers or just of letters:
+For the purpose of this introduction project and validation example, we define that a password can't consist just of numbers or just of letters:
 
 `mainapp\forms.html`
 
@@ -1840,7 +1839,7 @@ The page for displaying a wallet has a familiar structure:
 {% endblock %}
 ```
 
-The views and related code involved in the wallet creating and displaying processes follow the practice already presented in this tutorial:
+The views and related code involved in the wallet creating and displaying processes follow the practice already presented in this blog post:
 
 `mainapp/views.py`
 
@@ -2215,7 +2214,7 @@ def add_asset(data):
 
 # Search transactions
 
-In the last section of this tutorial, we're going to create a basic form that uses the Algorand SDK [indexer client](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/v2client/indexer.html) to perform searching for the transactions on the blockchain.
+In the last section of this blog post, we're going to create a basic form that uses the Algorand SDK [indexer client](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/v2client/indexer.html) to perform searching for the transactions on the blockchain.
 
 For the start, update the navigation bar in the base template with the fourth item:
 
@@ -2230,7 +2229,7 @@ For the start, update the navigation bar in the base template with the fourth it
     </div>
 ```
 
-The template renders a form the way we've already used in this tutorial, but this time the same template uses `transactions` context variable to display the found transactions:
+The template renders a form the way we've already used in this project, but this time the same template uses `transactions` context variable to display the found transactions:
 
 `mainapp\templates\mainapp\base.html`
 
@@ -2263,7 +2262,7 @@ urlpatterns = [
 ]
 ```
 
-The form used to accept users data brings some new elements we haven't yet used in this tutorial:
+The form used to accept users data brings some new elements we haven't yet used in this blog post:
 
 `mainapp/forms.py`
 
@@ -2360,3 +2359,7 @@ The Algorand's Indexer [search_transactions](https://py-algorand-sdk.readthedocs
 # Conclusion
 
 We introduced the reader to some basic concepts of Python Algorand SDK and the Django framework. Use the presented material and [publicly available code](https://github.com/ipaleka/algodjango) to start working on your own projects based on the Algorand blockchain.
+
+For any question or suggestion you may have, use the [issues section](https://github.com/ipaleka/algodjango/issues) of the algodjango project or use the Algorand [Discord channel](https://discord.com/invite/hbcUSuw).
+
+Enjoy your coding!
