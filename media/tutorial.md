@@ -1,3 +1,6 @@
+![algodjango](https://github.com/ipaleka/algodjango/blob/main/media/algodjango.png?raw=true)
+
+
 # Introduction
 
 The purpose of this tutorial is to introduce the reader to the [Algorand SDK](https://developer.algorand.org/docs/reference/sdks/) and its implementation in the [Django framework](https://www.djangoproject.com/).
