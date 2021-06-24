@@ -29,10 +29,16 @@ $ tree -L 1
 If that's not the case, then you should set `SANDBOX_DIR` environment variable holding sandbox directory before running the Django development server, like the following:
 
 ```bash
-export SANDBOX_DIR="/home/ipaleka/dev/algorand/sandbox
+export SANDBOX_DIR="/home/ipaleka/dev/algorand/sandbox"
 ```
 
 If you want to clone the repositories, not just download them, then you should have Git installed on your computer.
+
+And finally, keeping secrets in a public repository is not recommended so our code implies you set an environment variable for the Django SECRET_KEY:
+
+```bash
+export SECRET_KEY="my-django-secret-key"
+```
 
 
 # Setup
