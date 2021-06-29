@@ -867,6 +867,7 @@ Now create a brand new module `forms.py` in the main application directory and a
 
 ```python
 from algosdk.constants import address_len, mnemonic_len, note_max_length
+from algosdk.encoding import is_valid_address
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms.fields import CharField
@@ -893,10 +894,8 @@ class TransferFundsForm(forms.Form):
     def clean_receiver(self):
         """Example validation for the receiver field."""
         data = self.cleaned_data["receiver"]
-        if len(data) != address_len:
-            raise ValidationError(
-                "Algorand's address must be %s characters long!" % (address_len,)
-            )
+        if not is_valid_address(data):
+            raise ValidationError("Provided value is not a valid Algorand address!")
         return data
 ```
 
@@ -1502,9 +1501,31 @@ class CreateAssetForm(forms.models.ModelForm):
             "freeze",
             "clawback",
         )
+
+    def _clean_address(self, field):
+        """Base method for validation of fields holding Algorand address."""
+        data = self.cleaned_data[field]
+        if not is_valid_address(data):
+            raise ValidationError("Provided value is not a valid Algorand address!")
+        return data
+
+    def clean_creator(self):
+        return self._clean_address("creator")
+
+    def clean_manager(self):
+        return self._clean_address("manager")
+
+    def clean_reserve(self):
+        return self._clean_address("reserve")
+
+    def clean_freeze(self):
+        return self._clean_address("freeze")
+
+    def clean_clawback(self):
+        return self._clean_address("clawback")
 ```
 
-The additional field `passphrase` has not been a part of the asset's database record and it is used only to sign the transaction after the form is validated.
+The additional field `passphrase` has not been a part of the asset's database record and it is used only to sign the transaction after the form is validated. For validation of the fields based on the Algorand address, we pass a field name to the base `_clean_address` method that uses Algorand SDK to validate the address.
 
 ![Asset creation](https://github.com/ipaleka/algodjango/blob/main/media/asset-creation-page.png?raw=true)
 

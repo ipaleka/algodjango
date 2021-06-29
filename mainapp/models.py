@@ -1,4 +1,4 @@
-from algosdk.constants import address_len, hash_len, max_asset_decimals
+from algosdk.constants import address_len, hash_len, max_asset_decimals, metadata_length
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -51,7 +51,7 @@ class Asset(models.Model):
     )
     frozen = models.BooleanField(blank=False, default=False)
     url = models.URLField(blank=True)
-    metadata = models.CharField(max_length=hash_len, blank=True)
+    metadata = models.CharField(max_length=metadata_length, blank=True)
     manager = models.CharField(max_length=address_len, blank=True)
     reserve = models.CharField(max_length=address_len, blank=True)
     freeze = models.CharField(max_length=address_len, blank=True)
