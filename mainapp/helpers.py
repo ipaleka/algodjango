@@ -6,11 +6,10 @@ from pathlib import Path
 
 from algosdk import account, kmd, mnemonic
 from algosdk.constants import microalgos_to_algos_ratio
+from algosdk.error import WrongChecksumError, WrongMnemonicLengthError
 from algosdk.future.transaction import AssetConfigTxn, PaymentTxn
 from algosdk.v2client import algod, indexer
 from algosdk.wallet import Wallet
-
-from algosdk.error import WrongChecksumError
 
 INITIAL_FUNDS = 1000000000  # in microAlgos
 
@@ -120,8 +119,8 @@ def add_transaction(sender, receiver, passphrase, amount, note):
     except ValueError:
         return "passphrase", "Unknown word in passphrase"
 
-    transaction_id = client.send_transaction(signed_txn)
     try:
+        transaction_id = client.send_transaction(signed_txn)
         _wait_for_confirmation(client, transaction_id, 4)
     except Exception as err:
         return None, err  # None implies non-field error
@@ -149,13 +148,16 @@ def add_asset(data):
         strict_empty_address_check=False,
     )
     # Sign with secret key of creator
-    signed_txn = unsigned_txn.sign(mnemonic.to_private_key(data.get("passphrase")))
-
-    transaction_id = client.send_transaction(signed_txn)
     try:
+        signed_txn = unsigned_txn.sign(mnemonic.to_private_key(data.get("passphrase")))
+    except WrongMnemonicLengthError as err:
+        return None, err
+
+    try:
+        transaction_id = client.send_transaction(signed_txn)
         _wait_for_confirmation(client, transaction_id, 4)
     except Exception as err:
-        return None, err  # None implies non-field error
+        return None, err
 
     try:
         info = client.pending_transaction_info(transaction_id)
@@ -167,10 +169,9 @@ def add_asset(data):
 
 
 def add_standalone_account():
-    """Create standalone account and return two-tuple of its address and passphrase."""
+    """Create standalone account and return two-tuple of its private key and address."""
     private_key, address = account.generate_account()
-    passphrase = mnemonic.from_private_key(private_key)
-    return address, passphrase
+    return private_key, address
 
 
 def add_wallet(name, password):
@@ -230,6 +231,11 @@ def initial_funds_sender():
         ),
         None,
     )
+
+
+def passphrase_from_private_key(private_key):
+    """Return passphrase from provided private key."""
+    return mnemonic.from_private_key(private_key)
 
 
 def search_transactions(data):

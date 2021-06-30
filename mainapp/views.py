@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.http import Http404
 from django.shortcuts import redirect, render
 
 from .forms import (
@@ -32,24 +33,31 @@ def create_asset(request):
     """Create Algorand asset from the form data."""
     if request.method == "POST":
 
-        form = CreateAssetForm(request.POST)
+        if "retrieve_passphrase" in request.POST:
+            creator = Account.instance_from_address(request.POST.get("creator"))
+            request.POST = request.POST.copy()
+            request.POST.update({"passphrase": creator.passphrase})
+            form = CreateAssetForm(request.POST)
+        else:
 
-        if form.is_valid():
+            form = CreateAssetForm(request.POST)
 
-            asset_id, error_description = add_asset(form.cleaned_data)
-            if error_description == "":
+            if form.is_valid():
 
-                asset = form.save(commit=False)
-                asset.asset_id = asset_id
-                asset.save()
+                asset_id, error_description = add_asset(form.cleaned_data)
+                if error_description == "":
 
-                message = "Asset {} has been successfully created!".format(
-                    form.cleaned_data["name"]
-                )
-                messages.add_message(request, messages.SUCCESS, message)
-                return redirect("assets")
+                    asset = form.save(commit=False)
+                    asset.asset_id = asset_id
+                    asset.save()
 
-            form.add_error(None, error_description)
+                    message = "Asset {} has been successfully created!".format(
+                        form.cleaned_data["name"]
+                    )
+                    messages.add_message(request, messages.SUCCESS, message)
+                    return redirect("assets")
+
+                form.add_error(None, error_description)
 
     else:
         form = CreateAssetForm()
@@ -61,9 +69,9 @@ def create_asset(request):
 
 def create_standalone(request):
     """Create standalone account."""
-    address, passphrase = add_standalone_account()
-    Account.objects.create(address=address)
-    context = {"account": (address, passphrase)}
+    private_key, address = add_standalone_account()
+    account = Account.objects.create(address=address, private_key=private_key)
+    context = {"account": (address, account.passphrase)}
     return render(request, "mainapp/create_standalone.html", context)
 
 
@@ -169,27 +177,35 @@ def transfer_funds(request, sender):
     """Transfer funds from the provided sender account to the receiver from the form."""
     if request.method == "POST":
 
-        form = TransferFundsForm(request.POST)
+        if "retrieve_passphrase" in request.POST:
+            sender_instance = Account.instance_from_address(sender)
+            request.POST = request.POST.copy()
+            request.POST.update({"passphrase": sender_instance.passphrase})
+            form = TransferFundsForm(request.POST)
+        else:
 
-        if form.is_valid():
+            form = TransferFundsForm(request.POST)
 
-            error_field, error_description = add_transaction(
-                sender,
-                form.cleaned_data["receiver"],
-                form.cleaned_data["passphrase"],
-                form.cleaned_data["amount"],
-                form.cleaned_data["note"],
-            )
-            if error_field == "":
-                message = "Amount of {} microAlgos has been successfully transferred to account {}".format(
-                    form.cleaned_data["amount"], form.cleaned_data["receiver"]
+            if form.is_valid():
+
+                error_field, error_description = add_transaction(
+                    sender,
+                    form.cleaned_data["receiver"],
+                    form.cleaned_data["passphrase"],
+                    form.cleaned_data["amount"],
+                    form.cleaned_data["note"],
                 )
-                messages.add_message(request, messages.SUCCESS, message)
-                return redirect("standalone-account", sender)
+                if error_field == "":
+                    message = "Amount of {} microAlgos has been successfully transferred to account {}".format(
+                        form.cleaned_data["amount"], form.cleaned_data["receiver"]
+                    )
+                    messages.add_message(request, messages.SUCCESS, message)
+                    return redirect("standalone-account", sender)
 
-            form.add_error(error_field, error_description)
+                form.add_error(error_field, error_description)
 
     else:
+
         form = TransferFundsForm()
 
     context = {"form": form, "sender": sender}

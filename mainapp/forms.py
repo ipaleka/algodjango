@@ -10,7 +10,7 @@ from .models import Asset
 class TransferFundsForm(forms.Form):
     """Django form for transferring microAlgos between accounts."""
 
-    passphrase = forms.CharField()
+    passphrase = forms.CharField(required=False)
     receiver = forms.CharField(max_length=address_len)
     amount = forms.IntegerField(min_value=1)
     note = forms.CharField(max_length=note_max_length, required=False)
@@ -36,7 +36,7 @@ class TransferFundsForm(forms.Form):
 class CreateAssetForm(forms.models.ModelForm):
     """Django model form for creating Algorand assets."""
 
-    passphrase = CharField(required=True)
+    passphrase = CharField(required=False)
 
     class Meta:
         model = Asset

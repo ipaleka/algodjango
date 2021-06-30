@@ -256,25 +256,53 @@ We may use the Algorand SDK for the same purpose of fetching created accounts, b
 
 [Django model](https://docs.djangoproject.com/en/3.2/topics/db/models/) is a class that represents a table in your database. The default database engine of a newly created Django project is SQLite and we're going to use it in this project. That engine creates a single file in the project's root directory named `db.sqlite3` which represents our database.
 
-For the account model, we record only the account addresses and the time when they are created. The rest of the account information isn't kept in our database, and remembering the account passphrase is up to the user.
-
 Edit the `models.py` module and add the following code:
 
 ```python
 from algosdk.constants import address_len
 from django.db import models
 
+from .helpers import passphrase_from_private_key
+
 
 class Account(models.Model):
     """Base model class for Algorand accounts."""
 
     address = models.CharField(max_length=address_len)
+    private_key = models.CharField(max_length=address_len + hash_len)
     created = models.DateTimeField(auto_now_add=True)
 
     def balance(self):
         """Return this instance's balance in microAlgos."""
         return 0
+
+    @property
+    def passphrase(self):
+        """Return account's mnemonic."""
+        return passphrase_from_private_key(self.private_key)
 ```
+
+---
+**Security warning**
+
+Together with the account address, we also store its private key in our database. The reasoning behind this is that a simple user flows better suits this demonstration app than an implementation of security best practices.
+
+---
+
+As you can see, we introduced a new module named `helpers.py`. That module will hold all the Algorand functionality code of our project. Create that module in the main app directory with the following content:
+
+`mainapp/helpers.py`
+
+```python
+from algosdk import mnemonic
+
+
+def passphrase_from_private_key(private_key):
+    """Return passphrase from provided private key."""
+    return mnemonic.from_private_key(private_key)
+```
+
+This code that uses Algorand SDK should be straightforward: we used the provided private key to get the [account's passphrase](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/mnemonic.html#algosdk.mnemonic.from_private_key).
 
 In order to apply those changes to our database, run the following Django management commands:
 
@@ -416,31 +444,29 @@ from .helpers import add_standalone_account
 
 def create_standalone(request):
     """Create standalone account."""
-    address, passphrase = add_standalone_account()
-    Account.objects.create(address=address)
-    context = {"account": (address, passphrase)}
+    private_key, address = add_standalone_account()
+    account = Account.objects.create(address=address, private_key=private_key)
+    context = {"account": (address, account.passphrase)}
     return render(request, "mainapp/create_standalone.html", context)
 ```
 
-A new account record in the database is created by calling the `create` method on the Account's model `objects` manager. All the required model field values should be provided to the create method in order to successfully create an object - in our case that would be the account's address.
+A new account record in the database is created by calling the `create` method on the Account's model `objects` manager. All the required model field values should be provided to the create method in order to successfully create an object - in our case that would be the account's address and private key.
 
-As you can see, we introduced a new module named `helpers.py`. That module will hold all the Algorand functionality code of our project. Create that module in the main app directory with the following content:
+Add the following function to helpers module:
 
 `mainapp/helpers.py`
 
 ```python
-from algosdk import account, mnemonic
+from algosdk import account
 
 
 def add_standalone_account():
-    """Create standalone account and return two-tuple of its address and passphrase."""
+    """Create standalone account and return two-tuple of its private key and address."""
     private_key, address = account.generate_account()
-    passphrase = mnemonic.from_private_key(private_key)
-    return address, passphrase
+    return private_key, address
 ```
 
-This code that uses Algorand SDK should be straightforward: we [created an account](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/account.html#algosdk.account.generate_account) and used returned private key to get the [account's passphrase](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/mnemonic.html#algosdk.mnemonic.from_private_key).
-
+We [created an account](https://py-algorand-sdk.readthedocs.io/en/latest/algosdk/account.html#algosdk.account.generate_account) and returned private key and address in order to create an account in our database.
 
 Now create the template that will be rendered upon account creation.
 
@@ -462,6 +488,13 @@ Now create the template that will be rendered upon account creation.
 ```
 
 We provided a two-tuple (a tuple consisting of two items) as the context to this template and its values are retrieved by the related indexes.
+
+---
+**Note**
+
+For the production - contrary to what was done in this application with storing the private keys in the database - you should emphasize the fact that this would be the only time the account's passphrase is presented to the user.
+
+---
 
 Go to the index page, click the link entitled `Create standalone account` and you should see the page that looks like:
 
@@ -697,8 +730,8 @@ def add_transaction(sender, receiver, passphrase, amount, note):
     except ValueError:
         return "passphrase", "Unknown word in passphrase"
 
-    transaction_id = client.send_transaction(signed_txn)
     try:
+        transaction_id = client.send_transaction(signed_txn)
         _wait_for_confirmation(client, transaction_id, 4)
     except Exception as err:
         return None, err  # None implies non-field error
@@ -876,7 +909,7 @@ from django.forms.fields import CharField
 class TransferFundsForm(forms.Form):
     """Django form for transferring microAlgos between accounts."""
 
-    passphrase = forms.CharField()
+    passphrase = forms.CharField(required=False)
     receiver = forms.CharField(max_length=address_len)
     amount = forms.IntegerField(min_value=1)
     note = forms.CharField(max_length=note_max_length, required=False)
@@ -914,12 +947,17 @@ The template responsible for rendering this form looks like this:
   <form action="/transfer-funds/{{ sender }}/" method="post">
     {% csrf_token %}
     <table>{{ form.as_table }}</table>
-    <input type="submit" value="Submit">
+    <input type="submit" name="submit" value="Submit">
+    <br><br><hr>
+    <p><span style="color:red">WARNING: don't do this in production</span></p>
+    <input type="submit" name="retrieve_passphrase" value="Retrieve passphrase">
   </form>
 {% endblock %}
 ```
 
 As you can see, we instruct the Django template system to display the form as a table and Django takes care of rendering it properly. Also, every Django form needs the [Cross Site Request Forgery protection token tag](https://docs.djangoproject.com/en/3.2/ref/csrf/) for security reasons.
+
+Also, for the production, probably a user should manually enter the account's passphrase.
 
 In order to display the form errors text in red, update the CSS with:
 
@@ -943,27 +981,35 @@ def transfer_funds(request, sender):
     """Transfer funds from the provided sender account to the receiver from the form."""
     if request.method == "POST":
 
-        form = TransferFundsForm(request.POST)
+        if "retrieve_passphrase" in request.POST:
+            sender_instance = Account.instance_from_address(sender)
+            request.POST = request.POST.copy()
+            request.POST.update({"passphrase": sender_instance.passphrase})
+            form = TransferFundsForm(request.POST)
+        else:
 
-        if form.is_valid():
+            form = TransferFundsForm(request.POST)
 
-            error_field, error_description = add_transaction(
-                sender,
-                form.cleaned_data["receiver"],
-                form.cleaned_data["passphrase"],
-                form.cleaned_data["amount"],
-                form.cleaned_data["note"],
-            )
-            if error_field == "":
-                message = "Amount of {} microAlgos has been successfully transferred to account {}".format(
-                    form.cleaned_data["amount"], form.cleaned_data["receiver"]
+            if form.is_valid():
+
+                error_field, error_description = add_transaction(
+                    sender,
+                    form.cleaned_data["receiver"],
+                    form.cleaned_data["passphrase"],
+                    form.cleaned_data["amount"],
+                    form.cleaned_data["note"],
                 )
-                messages.add_message(request, messages.SUCCESS, message)
-                return redirect("standalone-account", sender)
+                if error_field == "":
+                    message = "Amount of {} microAlgos has been successfully transferred to account {}".format(
+                        form.cleaned_data["amount"], form.cleaned_data["receiver"]
+                    )
+                    messages.add_message(request, messages.SUCCESS, message)
+                    return redirect("standalone-account", sender)
 
-            form.add_error(error_field, error_description)
+                form.add_error(error_field, error_description)
 
     else:
+
         form = TransferFundsForm()
 
     context = {"form": form, "sender": sender}
@@ -971,7 +1017,7 @@ def transfer_funds(request, sender):
     return render(request, "mainapp/transfer_funds.html", context)
 ```
 
-This code uses the same template for the GET and the failed POST requests. For the GET it instantiates an empty form, while for the POST the form is instantiated with the user's data together with the errors, and then it is forwarded to the same template as a context variable.
+This code uses the same template for the GET and the failed POST requests. For the GET it instantiates an empty form, while for the POST the form is instantiated with the user's data together with the errors, and then it is forwarded to the same template as a context variable. For this example application not suitable for production, we use a different submit button just for retrieving the passphrase from our database and then we instantiate the form with the updated data.
 
 ![Server side error](https://github.com/ipaleka/algodjango/blob/main/media/form-server-side-error.png?raw=true)
 
@@ -1437,7 +1483,10 @@ The template for the asset creation uses a familiar structure with a form render
   <form action="/create-asset/" method="post">
     {% csrf_token %}
     <table>{{ form.as_table }}</table>
-    <input type="submit" value="Submit">
+    <input type="submit" name="submit" value="Submit">
+    <br><br><hr>
+    <p><span style="color:red">WARNING: don't do this in production</span></p>
+    <input type="submit" name="retrieve_passphrase" value="Retrieve passphrase">
   </form>
 {% endblock %}
 ```
@@ -1447,7 +1496,7 @@ The asset model is responsible for saving the same asset properties we already p
 `mainapp\models.py`
 
 ```python
-from algosdk.constants import max_asset_decimals
+from algosdk.constants import max_asset_decimals, metadata_length
 
 
 class Asset(models.Model):
@@ -1467,7 +1516,7 @@ class Asset(models.Model):
     )
     frozen = models.BooleanField(blank=False, default=False)
     url = models.URLField(blank=True)
-    metadata = models.CharField(max_length=hash_len, blank=True)
+    metadata = models.CharField(max_length=metadata_length, blank=True)
     manager = models.CharField(max_length=address_len, blank=True)
     reserve = models.CharField(max_length=address_len, blank=True)
     freeze = models.CharField(max_length=address_len, blank=True)
@@ -1483,7 +1532,7 @@ The most interesting part in this section is the [Django model form](https://doc
 class CreateAssetForm(forms.models.ModelForm):
     """Django model form for creating Algorand assets."""
 
-    passphrase = CharField(required=True)
+    passphrase = CharField(required=False)
 
     class Meta:
         model = Asset
@@ -1550,24 +1599,31 @@ def create_asset(request):
     """Create Algorand asset from the form data."""
     if request.method == "POST":
 
-        form = CreateAssetForm(request.POST)
+        if "retrieve_passphrase" in request.POST:
+            creator = Account.instance_from_address(request.POST.get("creator"))
+            request.POST = request.POST.copy()
+            request.POST.update({"passphrase": creator.passphrase})
+            form = CreateAssetForm(request.POST)
+        else:
 
-        if form.is_valid():
+            form = CreateAssetForm(request.POST)
 
-            asset_id, error_description = add_asset(form.cleaned_data)
-            if error_description == "":
+            if form.is_valid():
 
-                asset = form.save(commit=False)
-                asset.asset_id = asset_id
-                asset.save()
+                asset_id, error_description = add_asset(form.cleaned_data)
+                if error_description == "":
 
-                message = "Asset {} has been successfully created!".format(
-                    form.cleaned_data["name"]
-                )
-                messages.add_message(request, messages.SUCCESS, message)
-                return redirect("assets")
+                    asset = form.save(commit=False)
+                    asset.asset_id = asset_id
+                    asset.save()
 
-            form.add_error(None, error_description)
+                    message = "Asset {} has been successfully created!".format(
+                        form.cleaned_data["name"]
+                    )
+                    messages.add_message(request, messages.SUCCESS, message)
+                    return redirect("assets")
+
+                form.add_error(None, error_description)
 
     else:
         form = CreateAssetForm()
@@ -1584,6 +1640,7 @@ The `add_asset` helper function instantiates the [AssetConfigTxn](https://py-alg
 `mainapp\helpers.py`
 
 ```python
+from algosdk.error import WrongMnemonicLengthError
 from algosdk.future.transaction import AssetConfigTxn
 
 
@@ -1607,10 +1664,13 @@ def add_asset(data):
         strict_empty_address_check=False,
     )
     # Sign with secret key of creator
-    signed_txn = unsigned_txn.sign(mnemonic.to_private_key(data.get("passphrase")))
-
-    transaction_id = client.send_transaction(signed_txn)
     try:
+        signed_txn = unsigned_txn.sign(mnemonic.to_private_key(data.get("passphrase")))
+    except WrongMnemonicLengthError as err:
+        return None, err
+
+    try:
+        transaction_id = client.send_transaction(signed_txn)
         _wait_for_confirmation(client, transaction_id, 4)
     except Exception as err:
         return None, err  # None implies non-field error
