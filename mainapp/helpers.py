@@ -41,10 +41,16 @@ def cli_passphrase_for_account(address):
     """Return passphrase for provided address."""
     process = _call_sandbox_command("goal", "account", "export", "-a", address)
     passphrase = ""
-    for line in io.TextIOWrapper(process.stdout):
+    output = [line for line in io.TextIOWrapper(process.stdout)]
+    for line in output:
         parts = line.split('"')
         if len(parts) > 1:
             passphrase = parts[1]
+    if passphrase == "":
+        raise ValueError(
+            "Can't retrieve passphrase from the address: %s\nOutput: %s"
+            % (address, output)
+        )
     return passphrase
 
 
