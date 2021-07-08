@@ -231,7 +231,7 @@ def initial_funds_sender():
     return next(
         (
             account.get("address")
-            for account in reversed(_indexer_client().accounts().get("accounts", []))
+            for account in _indexer_client().accounts().get("accounts", [{},{}])[1:-1]
             if account.get("created-at-round") == 0
             and account.get("amount") > INITIAL_FUNDS + microalgos_to_algos_ratio / 10
         ),
