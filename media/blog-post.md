@@ -508,7 +508,7 @@ Algorand Sandbox operates either in a real network mode (using one of the Algora
 The following code in `helpers.py` module is responsible for retrieving the address of a test account (created by Sandbox) that has enough funds (funds to transfer plus the minimum requirement of 0.1 Algo) which can be transferred to our accounts:
 
 ```python
-from algosdk.constants import microalgos_to_algos_ratio
+from algosdk.constants import microalgos_to_algos_ratio, min_txn_fee
 from algosdk.v2client import indexer
 
 INITIAL_FUNDS = 1000000000  # in microAlgos
@@ -528,7 +528,7 @@ def initial_funds_sender():
             account.get("address")
             for account in _indexer_client().accounts().get("accounts", [])
             if account.get("created-at-round") == 0
-            and account.get("amount") > INITIAL_FUNDS + microalgos_to_algos_ratio / 10
+            and account.get("amount") > INITIAL_FUNDS + microalgos_to_algos_ratio / 10 + min_txn_fee
         ),
         None,
     )
