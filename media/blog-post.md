@@ -259,7 +259,7 @@ We may use the Algorand SDK for the same purpose of fetching created accounts, b
 Edit the `models.py` module and add the following code:
 
 ```python
-from algosdk.constants import address_len
+from algosdk.constants import address_len, hash_len
 from django.db import models
 
 from .helpers import passphrase_from_private_key
@@ -1116,9 +1116,6 @@ A user defines the name and password of the wallet, while Algorand SDK creates i
 `mainapp\models.html`
 
 ```python
-from algosdk.constants import hash_len
-
-
 class Wallet(models.Model):
     """Model class for wallets."""
 
