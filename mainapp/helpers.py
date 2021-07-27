@@ -231,8 +231,9 @@ def initial_funds_sender():
     return next(
         (
             account.get("address")
-            for account in _indexer_client().accounts().get("accounts", [{}, {}])[1:-1]
+            for account in _indexer_client().accounts().get("accounts", [{}, {}])
             if account.get("created-at-round") == 0
+            and account.get("status") == "Offline"
             and account.get("amount")
             > INITIAL_FUNDS + microalgos_to_algos_ratio / 10 + min_txn_fee
         ),
